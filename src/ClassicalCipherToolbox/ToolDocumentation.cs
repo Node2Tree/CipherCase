@@ -298,12 +298,12 @@ namespace ClassicalCipherToolbox
                 case "列换位": case "AMSCO": case "ADFGX": case "ADFGVX": return "最短与最长宽度限定排列空间。已知宽度时把两项设为相同值，可以更快得到稳定候选；ADFGX 与 ADFGVX 还可填写已知方阵关键词。";
                 case "Myszkowski": case "双重列换位": case "Ubchi": return "搜索次数控制排列优化深度；缩小宽度范围可以把时间集中到更可能的密钥。Ubchi 的空字母上限同时限定插入数量搜索。";
                 case "Autokey": case "Nihilist": return "按初始密钥或加法密钥长度逐项恢复，再用完整 N-gram 得分反复优化。已知长度时可把最短与最长长度设为同一个数。";
-                case "Playfair": case "Two-square": case "Four-square": case "Fractionated Morse": case "Polybius": case "同音替换": return "搜索次数决定每次密钥搜索的长度，随机重启次数决定独立起点数量。策略选“模拟退火”时可暂时接受较差移动，适合未知密钥；“爬山”最快，适合好初值；“延迟接受”适合评分平台；“再加热退火”会周期性升温，适合容易陷入局部最优的长搜索；“自动”采用模拟退火。";
+                case "Playfair": case "Two-square": case "Four-square": case "Fractionated Morse": case "Polybius": case "同音替换": return "搜索次数决定每次密钥搜索的长度，随机重启次数决定独立起点数量。模拟退火适合一般未知密钥；爬山适合好初值；延迟接受和阈值接受适合评分平台；再加热退火与自适应退火适合局部最优较多的长搜索；大洪水会逐步收紧可接受下限；记录到记录围绕本轮最佳解搜索。自动采用模拟退火。";
                 case "Bifid": case "Trifid": return "破解会同时搜索 keyed 字母表和周期；最短、最长周期用于裁剪周期范围，搜索次数与随机重启控制每个周期的密钥优化。搜索策略的适用条件与 Playfair 相同。";
-                case "跨行棋盘": return "破解枚举两个空位数字，并为每一组空位优化棋盘字母顺序。搜索次数控制每组棋盘的优化深度；可用模拟退火、爬山、延迟接受或再加热退火。";
+                case "跨行棋盘": return "破解枚举两个空位数字，并为每一组空位优化棋盘字母顺序。搜索次数控制每组棋盘的优化深度；搜索策略用于决定是否接受当前候选。";
                 case "VIC": return "加解密双方必须完全一致地使用常用字母、短语、日期和个人编号。消息切分位置是可选历史扰动；启用时解密也应填写非空切分参数以恢复原顺序。";
                 case "Enigma": return "加解密使用同一操作。型号决定转子数量和默认反射器：I/M3 使用三枚移动转子，M4 使用一枚静止 Greek 转子加三枚移动转子。环位从 1 开始；初始位置用 3 或 4 个字母。Crib 搜索固定环位、反射器和插线板，枚举移动转子位置；启用转子顺序搜索会把工作量扩大六倍。";
-                case "Running Key": return "完整已知明文可直接推导等长密钥；从文本开头对齐的片段会锁定对应密钥前缀，其余位置用明文与密钥双语言评分搜索。增加搜索次数和重启次数会延长搜索并扩大探索范围。";
+                case "Running Key": return "完整已知明文可直接推导等长密钥；从文本开头对齐的片段会锁定对应密钥前缀，其余位置用明文与密钥双语言评分搜索。增加搜索次数和重启次数会扩大探索范围；搜索策略与 Playfair 的适用条件相同。";
                 case "Bazeries": case "Ragbaby": case "Alberti": case "Bellaso": case "Jefferson Wheel": return "破解模式使用明确的数字、周期或种子范围，并结合内嵌关键词表与语言评分。缩小已知范围可显著减少耗时；候选关键词数量控制字典搜索宽度。";
                 case "Three-square": case "Digrafid": return "破解先分别筛选两个 keyed 方阵，再组合高分方阵；同时直接组合一组常见关键词。Digrafid 还枚举指定周期范围。";
                 case "Turning Grille": return "孔位从 1 开始编号。四次旋转后必须恰好覆盖整个方阵；重叠或遗漏会被拒绝。";

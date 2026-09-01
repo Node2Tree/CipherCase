@@ -54,7 +54,7 @@ namespace ClassicalCipherToolbox
 
         internal CipherForm()
         {
-            Text = "密码箱 1.1.8";
+            Text = "密码箱 1.1.9";
             StartPosition = FormStartPosition.CenterScreen;
             MinimumSize = new Size(800, 600);
             ClientSize = new Size(960, 700);

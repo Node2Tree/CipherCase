@@ -107,8 +107,8 @@ namespace ClassicalCipherToolbox.Analysis
             List<int> unique = new List<int>(); foreach (int code in codes) if (!unique.Contains(code)) unique.Add(code); int iterations = Read(r.Get("iterations"), 200000, 1000, 1000000), restarts = Read(r.Get("restarts"), 12, 1, 30); string language = LanguageModels.Normalize(r.Get("language")); Random random = new Random(117); List<Candidate> best = new List<Candidate>(); int[] codeCounts = new int[unique.Count]; foreach (int code in codes) codeCounts[unique.IndexOf(code)]++; List<int> codeOrder = new List<int>(); for (int i = 0; i < unique.Count; i++) codeOrder.Add(i); codeOrder.Sort(delegate(int a, int b) { return codeCounts[b].CompareTo(codeCounts[a]); }); List<int> letterOrder = new List<int>(); for (int i = 0; i < 26; i++) letterOrder.Add(i); double[] frequencies = LanguageModels.GetFrequencies(language); letterOrder.Sort(delegate(int a, int b) { return frequencies[b].CompareTo(frequencies[a]); }); char[] seedMap = new char[unique.Count]; for (int i = 0; i < codeOrder.Count; i++) seedMap[codeOrder[i]] = (char)('A' + letterOrder[Math.Min(25, i / 3)]);
             for (int restart = 0; restart < restarts; restart++)
             {
-                char[] map = (char[])seedMap.Clone(); for (int i = 0; i < restart * 4; i++) SwapRandom(map, random); string text = DecodeHomophonic(codes, unique, map); double score = Score(text, language), top = score; char[] topMap = (char[])map.Clone(); string heuristic = Heuristic(r); double[] late = LateHistory(score);
-                for (int step = 0; step < iterations; step++) { if ((step & 255) == 0) { r.ThrowIfCancellationRequested(); r.ReportProgress((restart * iterations + step) * 100 / (restarts * iterations), "同音替换 · " + HeuristicLabel(heuristic) + " · 重启 " + (restart + 1)); } int a = random.Next(map.Length), b = -1; char oldA = map[a], oldB = '\0'; if (random.Next(4) == 0) { char proposed; int attempts = 0; do { proposed = (char)('A' + random.Next(26)); attempts++; } while (MappingCount(map, proposed) >= 3 && attempts < 50); map[a] = proposed; } else { b = random.Next(map.Length); oldB = map[b]; map[a] = oldB; map[b] = oldA; } string trial = DecodeHomophonic(codes, unique, map); double value = Score(trial, language); if (AcceptMove(heuristic, value, score, step, iterations, 10.0, 1.0, random, late)) { text = trial; score = value; if (value > top) { top = value; topMap = (char[])map.Clone(); } } else { map[a] = oldA; if (b >= 0) map[b] = oldB; } }
+                char[] map = (char[])seedMap.Clone(); for (int i = 0; i < restart * 4; i++) SwapRandom(map, random); string text = DecodeHomophonic(codes, unique, map); double score = Score(text, language), top = score; char[] topMap = (char[])map.Clone(); string heuristic = HeuristicSearch.Normalize(r.Get("heuristic")); HeuristicSearchState searchState = HeuristicSearch.Create(score);
+                for (int step = 0; step < iterations; step++) { if ((step & 255) == 0) { r.ThrowIfCancellationRequested(); r.ReportProgress((restart * iterations + step) * 100 / (restarts * iterations), "同音替换 · " + HeuristicSearch.Label(heuristic) + " · 重启 " + (restart + 1)); } int a = random.Next(map.Length), b = -1; char oldA = map[a], oldB = '\0'; if (random.Next(4) == 0) { char proposed; int attempts = 0; do { proposed = (char)('A' + random.Next(26)); attempts++; } while (MappingCount(map, proposed) >= 3 && attempts < 50); map[a] = proposed; } else { b = random.Next(map.Length); oldB = map[b]; map[a] = oldB; map[b] = oldA; } string trial = DecodeHomophonic(codes, unique, map); double value = Score(trial, language); if (HeuristicSearch.Accept(heuristic, value, score, step, iterations, 10.0, 1.0, random, searchState)) { text = trial; score = value; if (value > top) { top = value; topMap = (char[])map.Clone(); } } else { map[a] = oldA; if (b >= 0) map[b] = oldB; } }
                 text = DecodeHomophonic(codes, unique, topMap); Add(best, new Candidate { Key = HomophonicMap(unique, topMap), Text = text, Score = top }, 15);
             }
             r.ReportProgress(100, "同音替换 · 完成"); return Format(best);
@@ -124,15 +124,15 @@ namespace ClassicalCipherToolbox.Analysis
 
         private static string CrackOrderAnneal(ToolRequest r, string name, bool twoKeys, bool ubchi)
         {
-            string source = r.Input ?? string.Empty; NeedLetters(source, 35, name); int min = Read(r.Get("min"), 2, 2, 10), max = Read(r.Get("max"), twoKeys ? 6 : 8, min, 10), iterations = Read(r.Get("iterations"), twoKeys ? 60000 : 30000, 1000, 1000000), nullMax = Read(r.Get("nullmax"), 3, 0, 20); string language = LanguageModels.Normalize(r.Get("language")), heuristic = Heuristic(r); Random random = new Random(919); List<Candidate> best = new List<Candidate>();
+            string source = r.Input ?? string.Empty; NeedLetters(source, 35, name); int min = Read(r.Get("min"), 2, 2, 10), max = Read(r.Get("max"), twoKeys ? 6 : 8, min, 10), iterations = Read(r.Get("iterations"), twoKeys ? 60000 : 30000, 1000, 1000000), nullMax = Read(r.Get("nullmax"), 3, 0, 20); string language = LanguageModels.Normalize(r.Get("language")), heuristic = HeuristicSearch.Normalize(r.Get("heuristic")); Random random = new Random(919); List<Candidate> best = new List<Candidate>();
             for (int width = min; width <= max; width++)
             {
-                int[] a = Identity(width), b = Identity(width); string ka = Keyword(a), kb = Keyword(b); int currentNull = 0; string text = OrderDecrypt(source, ka, kb, ubchi, currentNull); double score = Score(text, language), top = score; string topA = ka, topB = kb, topText = text; int topNull = currentNull; double[] late = LateHistory(score);
+                int[] a = Identity(width), b = Identity(width); string ka = Keyword(a), kb = Keyword(b); int currentNull = 0; string text = OrderDecrypt(source, ka, kb, ubchi, currentNull); double score = Score(text, language), top = score; string topA = ka, topB = kb, topText = text; int topNull = currentNull; HeuristicSearchState searchState = HeuristicSearch.Create(score);
                 for (int step = 0; step < iterations; step++)
                 {
-                    if ((step & 255) == 0) { r.ThrowIfCancellationRequested(); r.ReportProgress(((width - min) * iterations + step) * 100 / ((max - min + 1) * iterations), name + " · " + HeuristicLabel(heuristic) + " · 宽度 " + width); }
+                    if ((step & 255) == 0) { r.ThrowIfCancellationRequested(); r.ReportProgress(((width - min) * iterations + step) * 100 / ((max - min + 1) * iterations), name + " · " + HeuristicSearch.Label(heuristic) + " · 宽度 " + width); }
                     int[] target = twoKeys && random.Next(2) == 1 ? b : a; int x = random.Next(width), y = random.Next(width); int v = target[x]; target[x] = target[y]; target[y] = v; int proposedNull = ubchi && random.Next(4) == 0 ? random.Next(nullMax + 1) : currentNull; ka = Keyword(a); kb = Keyword(b); string trial = OrderDecrypt(source, ka, kb, ubchi, proposedNull); double value = Score(trial, language);
-                    if (AcceptMove(heuristic, value, score, step, iterations, 8.0, Math.Max(1, source.Length), random, late)) { score = value; text = trial; currentNull = proposedNull; if (value > top) { top = value; topA = ka; topB = kb; topText = trial; topNull = currentNull; } } else { v = target[x]; target[x] = target[y]; target[y] = v; }
+                    if (HeuristicSearch.Accept(heuristic, value, score, step, iterations, 8.0, Math.Max(1, source.Length), random, searchState)) { score = value; text = trial; currentNull = proposedNull; if (value > top) { top = value; topA = ka; topB = kb; topText = trial; topNull = currentNull; } } else { v = target[x]; target[x] = target[y]; target[y] = v; }
                 }
                 Add(best, new Candidate { Key = ubchi ? topA + " / nulls=" + topNull : topA + " / " + topB, Text = topText, Score = top }, 15);
             }
@@ -173,8 +173,8 @@ namespace ClassicalCipherToolbox.Analysis
         private static Candidate AnnealOne(ToolRequest r, string name, string alphabet, int iterations, int keys, int seed, Decoder decoder, string language, int baseProgress) { return AnnealOne(r, name, alphabet, iterations, keys, seed, decoder, language, baseProgress, 0); }
         private static Candidate AnnealOne(ToolRequest r, string name, string alphabet, int iterations, int keys, int seed, Decoder decoder, string language, int baseProgress, int period)
         {
-            Random random = new Random(seed); char[] a = alphabet.ToCharArray(), b = alphabet.ToCharArray(); for (int i = 0; i < (seed / 31) % 9; i++) { SwapRandom(a, random); if (keys == 2) SwapRandom(b, random); } string text = decoder(new string(a), new string(b), period); double score = Score(text, language), top = score; char[] topA = (char[])a.Clone(), topB = (char[])b.Clone(); string heuristic = Heuristic(r); double[] late = LateHistory(score);
-            for (int step = 0; step < iterations; step++) { if ((step & 255) == 0) { r.ThrowIfCancellationRequested(); r.ReportProgress(Math.Min(99, baseProgress + step * 10 / Math.Max(1, iterations)), name + " · " + HeuristicLabel(heuristic)); } bool second = keys == 2 && random.Next(2) == 1; char[] trialA = (char[])a.Clone(), trialB = (char[])b.Clone(), target = second ? trialB : trialA; MutateKey(target, random); string trial = decoder(new string(trialA), new string(trialB), period); double value = Score(trial, language); if (AcceptMove(heuristic, value, score, step, iterations, 12.0, 1.0, random, late)) { a = trialA; b = trialB; text = trial; score = value; if (value > top) { top = value; topA = (char[])a.Clone(); topB = (char[])b.Clone(); } } }
+            Random random = new Random(seed); char[] a = alphabet.ToCharArray(), b = alphabet.ToCharArray(); for (int i = 0; i < (seed / 31) % 9; i++) { SwapRandom(a, random); if (keys == 2) SwapRandom(b, random); } string text = decoder(new string(a), new string(b), period); double score = Score(text, language), top = score; char[] topA = (char[])a.Clone(), topB = (char[])b.Clone(); string heuristic = HeuristicSearch.Normalize(r.Get("heuristic")); HeuristicSearchState searchState = HeuristicSearch.Create(score);
+            for (int step = 0; step < iterations; step++) { if ((step & 255) == 0) { r.ThrowIfCancellationRequested(); r.ReportProgress(Math.Min(99, baseProgress + step * 10 / Math.Max(1, iterations)), name + " · " + HeuristicSearch.Label(heuristic)); } bool second = keys == 2 && random.Next(2) == 1; char[] trialA = (char[])a.Clone(), trialB = (char[])b.Clone(), target = second ? trialB : trialA; MutateKey(target, random); string trial = decoder(new string(trialA), new string(trialB), period); double value = Score(trial, language); if (HeuristicSearch.Accept(heuristic, value, score, step, iterations, 12.0, 1.0, random, searchState)) { a = trialA; b = trialB; text = trial; score = value; if (value > top) { top = value; topA = (char[])a.Clone(); topB = (char[])b.Clone(); } } }
             text = decoder(new string(topA), new string(topB), period); return new Candidate { Key = new string(topA) + (keys == 2 ? " / " + new string(topB) : string.Empty) + (period > 0 ? " / period=" + period : string.Empty), Text = text, Score = top };
         }
 
@@ -215,8 +215,8 @@ namespace ClassicalCipherToolbox.Analysis
             Random random = new Random(seed); char[] bestMap = (char[])seedMap.Clone(); string bestText = DecodeSymbols(symbols, bestMap); double bestScore = DirectScore(bestText, language);
             for (int restart = 0; restart < restarts; restart++)
             {
-                char[] map = (char[])seedMap.Clone(); for (int i = 0; i < restart * 3; i++) SwapRandom(map, random); string text = DecodeSymbols(symbols, map); double score = DirectScore(text, language); string heuristic = Heuristic(request); double[] late = LateHistory(score);
-                for (int step = 0; step < iterations; step++) { if ((step & 255) == 0) { request.ThrowIfCancellationRequested(); int done = restart * iterations + step, total = restarts * iterations; request.ReportProgress(progressStart + done * (progressEnd - progressStart) / Math.Max(1, total), name + " · " + HeuristicLabel(heuristic)); } int a = random.Next(map.Length), b = random.Next(map.Length); char c = map[a]; map[a] = map[b]; map[b] = c; string trial = DecodeSymbols(symbols, map); double value = DirectScore(trial, language); if (AcceptMove(heuristic, value, score, step, iterations, 10.0, 1.0, random, late)) { text = trial; score = value; if (value > bestScore) { bestScore = value; bestMap = (char[])map.Clone(); bestText = trial; } } else { c = map[a]; map[a] = map[b]; map[b] = c; } }
+                char[] map = (char[])seedMap.Clone(); for (int i = 0; i < restart * 3; i++) SwapRandom(map, random); string text = DecodeSymbols(symbols, map); double score = DirectScore(text, language); string heuristic = HeuristicSearch.Normalize(request.Get("heuristic")); HeuristicSearchState searchState = HeuristicSearch.Create(score);
+                for (int step = 0; step < iterations; step++) { if ((step & 255) == 0) { request.ThrowIfCancellationRequested(); int done = restart * iterations + step, total = restarts * iterations; request.ReportProgress(progressStart + done * (progressEnd - progressStart) / Math.Max(1, total), name + " · " + HeuristicSearch.Label(heuristic)); } int a = random.Next(map.Length), b = random.Next(map.Length); char c = map[a]; map[a] = map[b]; map[b] = c; string trial = DecodeSymbols(symbols, map); double value = DirectScore(trial, language); if (HeuristicSearch.Accept(heuristic, value, score, step, iterations, 10.0, 1.0, random, searchState)) { text = trial; score = value; if (value > bestScore) { bestScore = value; bestMap = (char[])map.Clone(); bestText = trial; } } else { c = map[a]; map[a] = map[b]; map[b] = c; } }
             }
             return new Candidate { Key = new string(bestMap), Text = bestText, Score = bestScore };
         }
@@ -255,31 +255,84 @@ namespace ClassicalCipherToolbox.Analysis
             else if (kind == 3) for (int i = 0; i < 2; i++) { char c = values[i * 5 + a]; values[i * 5 + a] = values[(4 - i) * 5 + a]; values[(4 - i) * 5 + a] = c; }
             else Array.Reverse(values);
         }
-        private static string Heuristic(ToolRequest request)
-        {
-            string value = (request.Get("heuristic") ?? string.Empty).Trim().ToUpperInvariant();
-            if (value == "爬山" || value == "HILL" || value == "HILLCLIMB") return "HILL";
-            if (value == "延迟接受" || value == "LATE" || value == "LATE_ACCEPTANCE") return "LATE";
-            if (value == "再加热退火" || value == "REHEAT") return "REHEAT";
-            return "ANNEAL";
-        }
-        private static string HeuristicLabel(string value)
-        {
-            if (value == "HILL") return "爬山"; if (value == "LATE") return "延迟接受"; if (value == "REHEAT") return "再加热退火"; return "模拟退火";
-        }
-        private static double[] LateHistory(double score) { double[] values = new double[64]; for (int i = 0; i < values.Length; i++) values[i] = score; return values; }
-        private static bool AcceptMove(string heuristic, double candidate, double current, int step, int iterations, double startTemperature, double scale, Random random, double[] late)
-        {
-            if (heuristic == "HILL") return candidate >= current;
-            if (heuristic == "LATE") { int slot = step % late.Length; bool accept = candidate >= current || candidate >= late[slot]; late[slot] = accept ? candidate : current; return accept; }
-            double fraction;
-            if (heuristic == "REHEAT") { int cycle = Math.Max(512, iterations / 5); fraction = (step % cycle) / (double)cycle; }
-            else fraction = step / (double)Math.Max(1, iterations);
-            double temperature = startTemperature * (1.0 - fraction) + .12;
-            return candidate >= current || random.NextDouble() < Math.Exp((candidate - current) / (Math.Max(.0001, scale) * temperature));
-        }
         private static void Add(List<Candidate> list, Candidate c, int limit) { list.Add(c); list.Sort(delegate(Candidate x, Candidate y) { return y.Score.CompareTo(x.Score); }); if (list.Count > limit) list.RemoveAt(list.Count - 1); }
         private static string Format(List<Candidate> list) { list.Sort(delegate(Candidate x, Candidate y) { return y.Score.CompareTo(x.Score); }); StringBuilder s = new StringBuilder(); for (int i = 0; i < Math.Min(15, list.Count); i++) s.AppendFormat(CultureInfo.InvariantCulture, "#{0}  密钥 {1}  评分 {2:0.00}\r\n{3}\r\n\r\n", i + 1, list[i].Key, list[i].Score, list[i].Text); return s.ToString().TrimEnd(); }
         private static List<int[]> GrilleOrbits(int n) { List<int[]> result = new List<int[]>(); HashSet<int> seen = new HashSet<int>(); for (int p = 0; p < n * n; p++) { if (seen.Contains(p)) continue; int[] orbit = new int[4]; int v = p; for (int i = 0; i < 4; i++) { orbit[i] = v; seen.Add(v); int row = v / n, col = v % n; v = col * n + n - 1 - row; } result.Add(orbit); } return result; }
+    }
+
+    internal sealed class HeuristicSearchState
+    {
+        internal readonly double[] Late = new double[64];
+        internal double Best;
+        internal double Water;
+        internal int Stagnation;
+        internal bool WaterInitialized;
+    }
+
+    internal static class HeuristicSearch
+    {
+        internal static HeuristicSearchState Create(double score)
+        {
+            HeuristicSearchState state = new HeuristicSearchState { Best = score, Water = score };
+            for (int i = 0; i < state.Late.Length; i++) state.Late[i] = score;
+            return state;
+        }
+
+        internal static string Normalize(string raw)
+        {
+            string value = (raw ?? string.Empty).Trim().ToUpperInvariant();
+            if (value == "爬山" || value == "HILL" || value == "HILLCLIMB") return "HILL";
+            if (value == "延迟接受" || value == "LATE" || value == "LATE_ACCEPTANCE") return "LATE";
+            if (value == "再加热退火" || value == "REHEAT") return "REHEAT";
+            if (value == "阈值接受" || value == "THRESHOLD" || value == "THRESHOLD_ACCEPTING") return "THRESHOLD";
+            if (value == "大洪水" || value == "DELUGE" || value == "GREAT_DELUGE") return "DELUGE";
+            if (value == "记录到记录" || value == "RECORD" || value == "RECORD_TO_RECORD") return "RECORD";
+            if (value == "自适应退火" || value == "ADAPTIVE" || value == "ADAPTIVE_ANNEALING") return "ADAPTIVE";
+            return "ANNEAL";
+        }
+
+        internal static string Label(string value)
+        {
+            if (value == "HILL") return "爬山";
+            if (value == "LATE") return "延迟接受";
+            if (value == "REHEAT") return "再加热退火";
+            if (value == "THRESHOLD") return "阈值接受";
+            if (value == "DELUGE") return "大洪水";
+            if (value == "RECORD") return "记录到记录";
+            if (value == "ADAPTIVE") return "自适应退火";
+            return "模拟退火";
+        }
+
+        internal static bool Accept(string heuristic, double candidate, double current, int step, int iterations, double startTemperature, double scale, Random random, HeuristicSearchState state)
+        {
+            double unit = Math.Max(.0001, scale), fraction = step / (double)Math.Max(1, iterations), allowance = unit * startTemperature * .08;
+            bool accept;
+            if (heuristic == "HILL") accept = candidate >= current;
+            else if (heuristic == "LATE")
+            {
+                int slot = step % state.Late.Length;
+                accept = candidate >= current || candidate >= state.Late[slot];
+                state.Late[slot] = accept ? candidate : current;
+            }
+            else if (heuristic == "THRESHOLD") accept = candidate >= current - allowance * (1.0 - fraction);
+            else if (heuristic == "RECORD") accept = candidate >= state.Best - allowance * (1.0 - fraction);
+            else if (heuristic == "DELUGE")
+            {
+                if (!state.WaterInitialized) { state.Water = current - allowance; state.WaterInitialized = true; }
+                state.Water += allowance / Math.Max(1, iterations);
+                accept = candidate >= current || candidate >= state.Water;
+            }
+            else
+            {
+                double heatFraction = fraction;
+                if (heuristic == "REHEAT") { int cycle = Math.Max(512, iterations / 5); heatFraction = (step % cycle) / (double)cycle; }
+                double temperature = startTemperature * (1.0 - heatFraction) + .12;
+                if (heuristic == "ADAPTIVE" && state.Stagnation > Math.Max(256, iterations / 50)) temperature *= 2.75;
+                accept = candidate >= current || random.NextDouble() < Math.Exp((candidate - current) / (unit * temperature));
+            }
+            if (accept && candidate > state.Best) { state.Best = candidate; state.Stagnation = 0; }
+            else state.Stagnation++;
+            return accept;
+        }
     }
 }
