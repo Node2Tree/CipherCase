@@ -51,6 +51,7 @@ namespace ClassicalCipherToolbox.Tests
             try { CheckExpansionCiphers(); } catch (Exception exception) { Console.Error.WriteLine("EXPANSION: " + exception.Message); Environment.Exit(1); }
             try { CheckLatestFeatures(); } catch (Exception exception) { Console.Error.WriteLine("LATEST: " + exception.Message); Environment.Exit(1); }
             try { CheckEncodingAndMoreClassics(); } catch (Exception exception) { Console.Error.WriteLine("ENCODING: " + exception.Message); Environment.Exit(1); }
+            try { CheckChineseSuite(); } catch (Exception exception) { Console.Error.WriteLine("CHINESE: " + exception.Message); Environment.Exit(1); }
             try { CheckAnalysis(); } catch (Exception exception) { Console.Error.WriteLine("ANALYSIS: " + exception.Message); Environment.Exit(1); }
             try { CheckNewCrackers(); } catch (Exception exception) { Console.Error.WriteLine("CRACKERS: " + exception.Message); Environment.Exit(1); }
             try { CheckExpansionCrackers(); } catch (Exception exception) { Console.Error.WriteLine("EXPANSION CRACKERS: " + exception.Message); Environment.Exit(1); }
@@ -155,6 +156,35 @@ namespace ClassicalCipherToolbox.Tests
             Check("Vatsyayana round trip", keywordPlain, VatsyayanaCipher.Transform(VatsyayanaCipher.Transform(keywordPlain, "SECRET"), "SECRET"));
             Check("Hill 3x3 vector", "POH", Hill3Cipher.Transform("ACT", "6,24,1,13,16,10,20,17,15", false));
             Check("Hill 3x3 round trip", "PAYMOREMONEY", Hill3Cipher.Transform(Hill3Cipher.Transform("PAYMOREMONEY", "6,24,1,13,16,10,20,17,15", false), "6,24,1,13,16,10,20,17,15", true));
+        }
+
+        private static void CheckChineseSuite()
+        {
+            string wubi = ChineseInputCode.Transform("中国", "五笔86", false); if (wubi.IndexOf("[", StringComparison.Ordinal) >= 0 || wubi.Split(' ').Length != 2) throw new Exception("Wubi86 table lookup failed: " + wubi); passed++;
+            string reverse = ChineseInputCode.Transform("k", "五笔86", true); if (reverse.IndexOf("中", StringComparison.Ordinal) < 0) throw new Exception("Wubi86 reverse lookup missed 中"); passed++;
+            string fuzzy = ChineseInputCode.Transform("k*", "五笔86", true); if (fuzzy.IndexOf("中", StringComparison.Ordinal) < 0) throw new Exception("Wildcard input-code lookup failed"); passed++;
+            string card = ChineseWorkbench.CharacterCard("中"); if (card.IndexOf("U+4E2D", StringComparison.Ordinal) < 0 || card.IndexOf("五笔86", StringComparison.Ordinal) < 0 || card.IndexOf("UTF-8", StringComparison.Ordinal) < 0) throw new Exception("Character detail card is incomplete"); passed++;
+            string ids = ChineseWorkbench.CharacterCard("好"); if (ids.IndexOf("IDS", StringComparison.Ordinal) < 0 || ids.IndexOf("女", StringComparison.Ordinal) < 0) throw new Exception("IDS lookup failed"); passed++;
+            if (ChineseWorkbench.CharacterCard(char.ConvertFromUtf32(0x20000)).IndexOf("U+20000", StringComparison.Ordinal) < 0) throw new Exception("Supplementary Han character was split"); passed++;
+            string cesu = UnicodeCompatibilityEncoding.Transform("😀中", "CESU-8", false); Check("CESU-8 round trip", "😀中", UnicodeCompatibilityEncoding.Transform(cesu, "CESU-8", true));
+            string modified = UnicodeCompatibilityEncoding.Transform("\0中文", "Modified UTF-8", false); Check("Modified UTF-8 round trip", "\0中文", UnicodeCompatibilityEncoding.Transform(modified, "Modified UTF-8", true));
+            string utf7 = UnicodeCompatibilityEncoding.Transform("中文+", "UTF-7", false); Check("UTF-7 round trip", "中文+", UnicodeCompatibilityEncoding.Transform(utf7, "UTF-7", true));
+            string bom = UnicodeCompatibilityEncoding.Transform("中文", "BOM 自动识别", false); Check("BOM round trip", "中文", UnicodeCompatibilityEncoding.Transform(bom, "BOM 自动识别", true));
+            string mime = ChineseTransferFormats.Transform("中文", "MIME encoded-word Base64", false); Check("MIME encoded word round trip", "中文", ChineseTransferFormats.Transform(mime, "MIME encoded-word Base64", true));
+            string mimeQ = ChineseTransferFormats.Transform("中文", "MIME encoded-word Q", false); Check("MIME Q round trip", "中文", ChineseTransferFormats.Transform(mimeQ, "MIME encoded-word Q", true));
+            string json = ChineseTransferFormats.Transform("中文", "JSON", false); Check("JSON escape round trip", "中文", ChineseTransferFormats.Transform(json, "JSON", true));
+            string css = ChineseTransferFormats.Transform("中文", "CSS", false); Check("CSS escape round trip", "中文", ChineseTransferFormats.Transform(css, "CSS", true));
+            string xml = ChineseTransferFormats.Transform("中文", "XML 十六进制实体", false); Check("XML escape round trip", "中文", ChineseTransferFormats.Transform(xml, "XML 十六进制实体", true));
+            string custom = ChineseCodeTableWorkbench.Query("中", "五笔86", "中 khk\n文 yygy"); if (custom != "khk") throw new Exception("Custom code table import failed: " + custom); passed++;
+            Check("Custom phrase table", "zg", ChineseCodeTableWorkbench.Query("中国", "五笔86", "中国 zg\n中 khk"));
+            string roman = ChineseRomanization.Transform("中国", "汉语拼音"); if (roman.IndexOf("zhong", StringComparison.OrdinalIgnoreCase) < 0) throw new Exception("Chinese romanization failed: " + roman); passed++;
+            Check("Pinyin tone mark", "zhōng guó", ChineseRomanization.FormatPinyin("zhong1 guo2", "声调符号"));
+            foreach (string scheme in new[] { "自然码双拼", "智能ABC双拼", "小鹤双拼", "微软双拼", "拼音加加双拼", "四通双拼" }) { string code = ChineseInputCode.Transform("中", scheme, false); if (code.IndexOf("[", StringComparison.Ordinal) >= 0 || code.Length != 2) throw new Exception("Double-pinyin conversion failed for " + scheme + ": " + code); } passed++;
+            string historical = ChineseHistoricalEncoding.Transform("中文", "CNS 11643 / CP20000", false); Check("Historical charset round trip", "中文", ChineseHistoricalEncoding.Transform(historical, "CNS 11643 / CP20000", true));
+            string detection = ChineseWorkbench.Identify("D6D0CEC4"); if (detection.IndexOf("GB", StringComparison.OrdinalIgnoreCase) < 0 || detection.IndexOf("中文", StringComparison.Ordinal) < 0) throw new Exception("Chinese charset identification failed"); passed++;
+            if (CipherIdentifier.Identify("D6D0CEC4", string.Empty).IndexOf("中文字符集字节", StringComparison.Ordinal) < 0) throw new Exception("Universal identifier did not promote Chinese charset bytes"); passed++;
+            string inputCodes = ChineseInputCode.Transform("中国人民", "五笔86", false); if (CipherIdentifier.Identify(inputCodes, string.Empty).IndexOf("中文输入法码", StringComparison.Ordinal) < 0) throw new Exception("Universal identifier did not promote Chinese input codes: " + inputCodes); passed++;
+            string comparison = ChineseWorkbench.CharsetComparison("中文𠀀"); if (comparison.IndexOf("GB18030", StringComparison.Ordinal) < 0 || comparison.IndexOf("无法表示", StringComparison.Ordinal) < 0) throw new Exception("Charset comparison failed"); passed++;
         }
 
         private static void CheckExtendedCiphers()
@@ -401,7 +431,7 @@ namespace ClassicalCipherToolbox.Tests
         private static void CheckToolRegistry()
         {
             IList<ICryptoTool> tools = ToolRegistry.CreateAll();
-            if (tools.Count != 108) throw new Exception("Tool registry: expected 108 tools but got " + tools.Count);
+            if (tools.Count != 118) throw new Exception("Tool registry: expected 118 tools but got " + tools.Count);
             bool foundCrack = false;
             bool foundAnalyze = false;
             int crackable = 0;
@@ -511,7 +541,7 @@ namespace ClassicalCipherToolbox.Tests
                 Dictionary<string, TextBox> parameters = (Dictionary<string, TextBox>)typeof(CipherForm).GetField("parameterBoxes", flags).GetValue(form);
                 ComboBox category = (ComboBox)typeof(CipherForm).GetField("categoryPicker", flags).GetValue(form);
                 ComboBox tags = (ComboBox)typeof(CipherForm).GetField("tagPicker", flags).GetValue(form);
-                if (form.Text != "密码箱 1.2.1.1" || category.Items.Contains("全部") || !category.Items.Contains(ToolCategories.Encoding)) throw new Exception("Product version or concrete categories not applied");
+                if (form.Text != "密码箱 1.2.2" || category.Items.Contains("全部") || !category.Items.Contains(ToolCategories.Encoding) || !category.Items.Contains(ToolCategories.Chinese)) throw new Exception("Product version or concrete categories not applied");
                 if (!tags.Items.Contains("常用") || !tags.Items.Contains("可破解") || tags.Items.Contains("全部")) throw new Exception("Tag picker was not populated");
                 passed++;
                 tags.SelectedItem = "可破解"; ComboBox taggedTools = (ComboBox)typeof(CipherForm).GetField("toolPicker", flags).GetValue(form); foreach (object item in taggedTools.Items) if (!((ICryptoTool)item).Modes.Contains(ToolMode.Crack)) throw new Exception("Tag picker retained a non-crackable tool"); tags.SelectedItem = ToolTags.Any; passed++;

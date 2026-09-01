@@ -109,6 +109,8 @@ namespace ClassicalCipherToolbox.Analysis
             string compact = RemoveWhitespace(source); bool onlyHex = compact.Length >= 8 && compact.Length % 2 == 0, onlyBinary = compact.Length >= 8 && compact.Length % 8 == 0, onlyBase64 = compact.Length >= 8 && compact.Length % 4 == 0, onlyBase32 = compact.Length >= 8 && compact.Length % 8 == 0; int braille = 0; foreach (char c in compact) { if (!Uri.IsHexDigit(c)) onlyHex = false; if (c != '0' && c != '1') onlyBinary = false; if (!(char.IsLetterOrDigit(c) || c == '+' || c == '/' || c == '=' || c == '-' || c == '_')) onlyBase64 = false; char b = char.ToUpperInvariant(c); if (!(b >= 'A' && b <= 'Z') && !(b >= '2' && b <= '7') && c != '=') onlyBase32 = false; if (c >= '\u2800' && c <= '\u28FF') braille++; }
             if (onlyBinary) AddGuess(guesses, "二进制", 98, "字符集仅为 0/1，位数是 8 的倍数");
             else if (onlyHex && HasDigitAndHexLetter(compact)) AddGuess(guesses, "十六进制", 92, "字符集为十六进制，位数是字节的倍数");
+            if (onlyHex && HasDigitAndHexLetter(compact)) { string charset, decoded; if (TryChineseCharset(compact, out charset, out decoded)) AddGuess(guesses, "中文字符集字节", 97, charset + " 严格解码得到中文：“" + Preview(decoded) + "”"); }
+            if (source.IndexOf("=?", StringComparison.Ordinal) >= 0 && source.IndexOf("?=", StringComparison.Ordinal) >= 0) AddGuess(guesses, "中文传输格式", 98, "符合 MIME encoded-word 边界");
             if (LooksLikeQrMatrix(source)) AddGuess(guesses, "QR Code", 99, "包含完整的 21×21 二进制矩阵");
             string bitPayload = LabeledBitPayload(source); if (bitPayload.Length == 95 && bitPayload.StartsWith("101", StringComparison.Ordinal) && bitPayload.EndsWith("101", StringComparison.Ordinal) && bitPayload.Substring(45, 5) == "01010") AddGuess(guesses, "条形码", 99, "95 位位串具有 EAN-13 守护条结构");
             if (LooksLikeFiveBitCode(source)) AddGuess(guesses, "博多码 ITA2", 94, "由成组的五单位二进制代码组成");
@@ -148,6 +150,7 @@ namespace ClassicalCipherToolbox.Analysis
                 }
                 if (TokenWidthVariation(tokens) >= 3 && HasPunctuation(source)) AddGuess(guesses, "跨行棋盘", 83, "数字段长度随字符编码变化并保留文本边界");
             }
+            if (source == source.ToLowerInvariant() && LooksLikeInputCodeSequence(source)) { string scheme; int hits = ChineseCodeTables.BestMatch(source, out scheme); int tokens = source.Split(new[] { ' ', '\t', '\r', '\n', ',' }, StringSplitOptions.RemoveEmptyEntries).Length; if (hits >= 3 && hits * 4 >= tokens * 3) AddGuess(guesses, "中文输入法码", 91, scheme + " 码表命中 " + hits + "/" + tokens + " 个输入码"); }
         }
 
         private static string RemoveWhitespace(string value) { StringBuilder result = new StringBuilder(); foreach (char c in value ?? string.Empty) if (!char.IsWhiteSpace(c)) result.Append(c); return result.ToString(); }
@@ -164,6 +167,9 @@ namespace ClassicalCipherToolbox.Analysis
         private static int CountRange(string source, char first, char last) { int count = 0; foreach (char c in source ?? string.Empty) if (c >= first && c <= last) count++; return count; }
         private static int CountPigpen(string source) { const string symbols = "⌜⌝⌞⌟┌┐└┘⊢⊣⊤⊥×◇◆△▽"; int count = 0; foreach (char c in source ?? string.Empty) if (symbols.IndexOf(c) >= 0) count++; return count; }
         private static bool TryReadableBase64(string value, bool url, out string plain) { plain = string.Empty; try { string encoded = url ? value.Replace('-', '+').Replace('_', '/') : value; encoded += new string('=', (4 - encoded.Length % 4) % 4); byte[] bytes = Convert.FromBase64String(encoded); plain = new UTF8Encoding(false, true).GetString(bytes); if (plain.Length < 3) return false; int printable = 0; foreach (char c in plain) if (!char.IsControl(c) || char.IsWhiteSpace(c)) printable++; return printable >= plain.Length * .9; } catch { return false; } }
+        private static bool TryChineseCharset(string hex, out string charset, out string decoded) { string[] choices = { "GB18030", "GBK / CP936", "GB2312 / EUC-CN", "Big5 / CP950" }; charset = string.Empty; decoded = string.Empty; int best = 0; foreach (string choice in choices) try { string text = TransferEncoding.CharsetBytes(hex, choice, true); int han = 0; foreach (char c in text) if (c >= '\u3400' && c <= '\u9FFF') han++; if (han > best) { best = han; charset = choice; decoded = text; } } catch { } return best >= Math.Max(1, decoded.Length / 2); }
+        private static string Preview(string value) { string text = (value ?? string.Empty).Replace("\r", " ").Replace("\n", " "); return text.Length > 24 ? text.Substring(0, 24) + "…" : text; }
+        private static bool LooksLikeInputCodeSequence(string source) { string[] tokens = (source ?? string.Empty).Split(new[] { ' ', '\t', '\r', '\n', ',' }, StringSplitOptions.RemoveEmptyEntries); if (tokens.Length < 3 || tokens.Length > 64) return false; foreach (string raw in tokens) foreach (string token in raw.Split('/')) { if (token.Length < 1 || token.Length > 6) return false; foreach (char c in token) if (!char.IsLetterOrDigit(c) && c != ';' && c != '\'') return false; } return true; }
 
         private static TransformProbe ProbeSimpleSubstitution(string source, double sourceScore, string matchMethod)
         {

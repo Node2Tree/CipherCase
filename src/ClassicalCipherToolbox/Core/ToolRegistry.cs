@@ -12,6 +12,7 @@ namespace ClassicalCipherToolbox.Core
             List<ICryptoTool> tools = new List<ICryptoTool>();
             AddGeneral(tools);
             AddEncoding(tools);
+            AddChinese(tools);
             AddCipher(tools, new CaesarCipher(), ToolCategories.Substitution, true, true);
             AddCipher(tools, new Rot13Cipher(), ToolCategories.Substitution, false, true);
             AddCipher(tools, new AtbashCipher(), ToolCategories.Substitution, false, true);
@@ -234,8 +235,6 @@ namespace ClassicalCipherToolbox.Core
             tools.Add(new DelegateCryptoTool("字符集字节", ToolCategories.Encoding, new[] { ToolMode.Encode, ToolMode.Decode }, new[] { new ToolParameter("charset", "字符集", false, ToolParameterEditor.Choice, "UTF-8", TransferEncoding.CharsetChoices) }, delegate(ToolRequest r) { return TransferEncoding.CharsetBytes(r.Input, r.Get("charset"), r.Mode == ToolMode.Decode); }));
             AddCodec(tools, "盲文（英语一级）", BrailleCode.Transform);
             AddCodec(tools, "博多码 ITA2", BaudotCode.Transform);
-            AddCodec(tools, "中文电报码", ChineseTelegraphCode.Transform);
-            tools.Add(new DelegateCryptoTool("中文输入法码", ToolCategories.Encoding, new[] { ToolMode.Encode, ToolMode.Decode }, new[] { new ToolParameter("scheme", "方案", false, ToolParameterEditor.Choice, ChineseInputCode.SchemeChoices[0], ChineseInputCode.SchemeChoices) }, delegate(ToolRequest r) { return ChineseInputCode.Transform(r.Input, r.Get("scheme"), r.Mode == ToolMode.Decode); }));
             AddCodec(tools, "北约音标字母", NatoPhonetic.Transform);
             AddCodec(tools, "猪圈密码符号", SymbolCodes.Pigpen);
             AddCodec(tools, "旗语", SymbolCodes.FlagSemaphore);
@@ -243,6 +242,22 @@ namespace ClassicalCipherToolbox.Core
             tools.Add(new DelegateCryptoTool("QR Code", ToolCategories.Encoding, new[] { ToolMode.Encode, ToolMode.Decode }, new ToolParameter[0], delegate(ToolRequest r) { return QrCodeV1.Transform(r.Input, r.Mode == ToolMode.Decode); }));
             tools.Add(new DelegateCryptoTool("颜色编码", ToolCategories.Encoding, new[] { ToolMode.Encode, ToolMode.Decode }, new ToolParameter[0], delegate(ToolRequest r) { return ColorEncoding.Text(r.Input, r.Mode == ToolMode.Decode); }));
             tools.Add(new DelegateCryptoTool("取色器与调色盘", ToolCategories.Encoding, new[] { ToolMode.Analyze }, new ToolParameter[0], delegate(ToolRequest r) { return ColorEncoding.Palette(r.Input); }));
+        }
+
+        private static void AddChinese(List<ICryptoTool> tools)
+        {
+            tools.Add(new DelegateCryptoTool("中文编码工作台", ToolCategories.Chinese, new[] { ToolMode.Analyze }, new ToolParameter[0], delegate(ToolRequest r) { return ChineseWorkbench.Workbench(r.Input); }));
+            tools.Add(new DelegateCryptoTool("字符详情卡", ToolCategories.Chinese, new[] { ToolMode.Analyze }, new ToolParameter[0], delegate(ToolRequest r) { return ChineseWorkbench.CharacterCard(r.Input); }));
+            tools.Add(new DelegateCryptoTool("中文输入法码", ToolCategories.Chinese, new[] { ToolMode.Encode, ToolMode.Decode }, new[] { new ToolParameter("scheme", "输入法或检字方案", false, ToolParameterEditor.Choice, ChineseInputCode.SchemeChoices[0], ChineseInputCode.SchemeChoices) }, delegate(ToolRequest r) { return ChineseInputCode.Transform(r.Input, r.Get("scheme"), r.Mode == ToolMode.Decode); }));
+            tools.Add(new DelegateCryptoTool("中文码表工作台", ToolCategories.Chinese, new[] { ToolMode.Analyze }, new[] { new ToolParameter("scheme", "内置码表", false, ToolParameterEditor.Choice, ChineseCodeTables.SchemeChoices[0], ChineseCodeTables.SchemeChoices), new ToolParameter("table", "可选自定义码表文件；每行“字 码”或“码 字”", false, ToolParameterEditor.LongTextFile, string.Empty, null) }, delegate(ToolRequest r) { return ChineseCodeTableWorkbench.Query(r.Input, r.Get("scheme"), r.Get("table")); }));
+            tools.Add(new DelegateCryptoTool("中文语音与罗马化", ToolCategories.Chinese, new[] { ToolMode.Encode }, new[] { new ToolParameter("target", "目标方案", false, ToolParameterEditor.Choice, ChineseRomanization.TargetChoices[0], ChineseRomanization.TargetChoices) }, delegate(ToolRequest r) { return ChineseRomanization.Transform(r.Input, r.Get("target")); }));
+            tools.Add(new DelegateCryptoTool("拼音格式转换", ToolCategories.Chinese, new[] { ToolMode.Encode }, new[] { new ToolParameter("target", "目标格式", false, ToolParameterEditor.Choice, ChineseRomanization.PinyinFormatChoices[0], ChineseRomanization.PinyinFormatChoices) }, delegate(ToolRequest r) { return ChineseRomanization.FormatPinyin(r.Input, r.Get("target")); }));
+            tools.Add(new DelegateCryptoTool("中文编码识别", ToolCategories.Chinese, new[] { ToolMode.Analyze }, new ToolParameter[0], delegate(ToolRequest r) { return ChineseWorkbench.Identify(r.Input); }));
+            tools.Add(new DelegateCryptoTool("中文字符集对照", ToolCategories.Chinese, new[] { ToolMode.Analyze }, new ToolParameter[0], delegate(ToolRequest r) { return ChineseWorkbench.CharsetComparison(r.Input); }));
+            tools.Add(new DelegateCryptoTool("Unicode 兼容格式", ToolCategories.Chinese, new[] { ToolMode.Encode, ToolMode.Decode }, new[] { new ToolParameter("format", "格式", false, ToolParameterEditor.Choice, UnicodeCompatibilityEncoding.Choices[0], UnicodeCompatibilityEncoding.Choices) }, delegate(ToolRequest r) { return UnicodeCompatibilityEncoding.Transform(r.Input, r.Get("format"), r.Mode == ToolMode.Decode); }));
+            tools.Add(new DelegateCryptoTool("中文传输格式", ToolCategories.Chinese, new[] { ToolMode.Encode, ToolMode.Decode }, new[] { new ToolParameter("format", "格式", false, ToolParameterEditor.Choice, ChineseTransferFormats.Choices[0], ChineseTransferFormats.Choices) }, delegate(ToolRequest r) { return ChineseTransferFormats.Transform(r.Input, r.Get("format"), r.Mode == ToolMode.Decode); }));
+            tools.Add(new DelegateCryptoTool("历史中文字符集", ToolCategories.Chinese, new[] { ToolMode.Encode, ToolMode.Decode }, new[] { new ToolParameter("charset", "历史代码页", false, ToolParameterEditor.Choice, ChineseHistoricalEncoding.Choices[0], ChineseHistoricalEncoding.Choices) }, delegate(ToolRequest r) { return ChineseHistoricalEncoding.Transform(r.Input, r.Get("charset"), r.Mode == ToolMode.Decode); }));
+            tools.Add(new DelegateCryptoTool("中文电报码", ToolCategories.Chinese, new[] { ToolMode.Encode, ToolMode.Decode }, new ToolParameter[0], delegate(ToolRequest r) { return ChineseTelegraphCode.Transform(r.Input, r.Mode == ToolMode.Decode); }));
         }
 
         private static void AddAdditionalClassics(List<ICryptoTool> tools)
@@ -403,13 +418,14 @@ namespace ClassicalCipherToolbox.Core
 
         private static int CategoryRank(string category)
         {
-            if (category == ToolCategories.General) return 0; if (category == ToolCategories.Encoding) return 1; if (category == ToolCategories.Substitution) return 2; if (category == ToolCategories.Polyalphabetic) return 3; if (category == ToolCategories.Transposition) return 4; if (category == ToolCategories.Grid) return 5; return 6;
+            if (category == ToolCategories.General) return 0; if (category == ToolCategories.Chinese) return 1; if (category == ToolCategories.Encoding) return 2; if (category == ToolCategories.Substitution) return 3; if (category == ToolCategories.Polyalphabetic) return 4; if (category == ToolCategories.Transposition) return 5; if (category == ToolCategories.Grid) return 6; return 7;
         }
 
         private static int Commonness(ICryptoTool tool)
         {
             string[] order;
             if (tool.Category == ToolCategories.General) order = new[] { "通用破解", "密码识别器", "分析工作台", "频率", "重合指数", "N-gram", "Kasiski", "Crib 工具" };
+            else if (tool.Category == ToolCategories.Chinese) order = new[] { "中文编码工作台", "字符详情卡", "中文输入法码", "拼音格式转换", "中文语音与罗马化", "中文码表工作台", "中文编码识别", "中文字符集对照", "Unicode 兼容格式", "中文传输格式", "中文电报码", "历史中文字符集" };
             else if (tool.Category == ToolCategories.Encoding) order = new[] { "自动解码", "Base64", "十六进制", "URL 编码", "Unicode 转义", "二进制", "Base32", "字符集字节", "中文输入法码", "HTML 实体", "QR Code", "Morse", "条形码", "Base64URL", "Quoted-Printable", "盲文（英语一级）", "中文电报码", "博多码 ITA2", "颜色编码", "取色器与调色盘", "Base58", "ASCII85", "Punycode", "A1Z26", "Tap Code", "北约音标字母", "旗语", "猪圈密码符号" };
             else if (tool.Category == ToolCategories.Substitution) order = new[] { "凯撒", "ROT13", "Atbash", "仿射", "ROT-N", "单表替换", "培根", "Keyword Cipher", "Multiplicative", "同音替换", "Book Cipher", "Nomenclator", "Grandpré", "Vatsyayana" };
             else if (tool.Category == ToolCategories.Polyalphabetic) order = new[] { "维吉尼亚", "Beaufort", "Autokey", "Gronsfeld", "Porta", "Running Key", "Enigma", "Variant Beaufort", "Trithemius", "渐进凯撒", "Alberti", "Bellaso", "Ragbaby", "Jefferson Wheel", "Quagmire I", "Quagmire II", "Quagmire III", "Quagmire IV", "Gromark", "Periodic Gromark", "Chaocipher", "Solitaire", "Nicodemus" };

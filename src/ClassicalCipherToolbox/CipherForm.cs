@@ -56,7 +56,7 @@ namespace ClassicalCipherToolbox
 
         internal CipherForm()
         {
-            Text = "密码箱 1.2.1.1";
+            Text = "密码箱 1.2.2";
             StartPosition = FormStartPosition.CenterScreen;
             MinimumSize = new Size(800, 600);
             ClientSize = new Size(960, 700);
@@ -96,7 +96,7 @@ namespace ClassicalCipherToolbox
             rootLayout.Controls.Add(topBar, 0, 0);
             categoryPicker = CreatePicker(104);
             categoryPicker.Margin = new Padding(0, 0, 8, 0);
-            categoryPicker.Items.AddRange(new object[] { ToolCategories.General, ToolCategories.Encoding, ToolCategories.Substitution, ToolCategories.Polyalphabetic, ToolCategories.Transposition, ToolCategories.Grid });
+            categoryPicker.Items.AddRange(new object[] { ToolCategories.General, ToolCategories.Chinese, ToolCategories.Encoding, ToolCategories.Substitution, ToolCategories.Polyalphabetic, ToolCategories.Transposition, ToolCategories.Grid });
             UpdatePickerDropDownWidth(categoryPicker);
             categoryPicker.SelectedIndexChanged += delegate { PopulateTools(); };
             topBar.Controls.Add(categoryPicker);
@@ -513,7 +513,7 @@ namespace ClassicalCipherToolbox
         }
         private static string ExecuteWithRules(ICryptoTool tool, ToolMode mode, string input, IDictionary<string, string> values, TextRuleOptions rules, Action<int, string> progress, Func<bool> cancellation, Action<string> partial)
         {
-            string working = mode == ToolMode.Encode || mode == ToolMode.Decode || tool.Category == ToolCategories.Encoding ? input ?? string.Empty : TextRules.ToWorking(input, rules);
+            string working = mode == ToolMode.Encode || mode == ToolMode.Decode || tool.Category == ToolCategories.Encoding || tool.Category == ToolCategories.Chinese ? input ?? string.Empty : TextRules.ToWorking(input, rules);
             string output = tool.Execute(new ToolRequest(mode, working, values, progress, cancellation, partial));
             return mode == ToolMode.Encrypt || mode == ToolMode.Decrypt ? TextRules.FromWorking(output, rules) : output;
         }

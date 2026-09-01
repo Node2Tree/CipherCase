@@ -26,6 +26,8 @@ $fiveGramResource = Join-Path $sourceRoot "Analysis\english-5grams.bin.gz"
 $keywordResource = Join-Path $sourceRoot "Analysis\english-keywords.txt.gz"
 $telegraphResource = Join-Path $sourceRoot "Analysis\chinese-telegraph.txt.gz"
 $inputCodeResource = Join-Path $sourceRoot "Analysis\chinese-input-codes.txt.gz"
+$chineseTableResource = Join-Path $sourceRoot "Analysis\chinese-code-tables.txt.gz"
+$chineseIdsResource = Join-Path $sourceRoot "Analysis\chinese-ids.txt.gz"
 
 & $compiler `
     /nologo `
@@ -42,6 +44,8 @@ $inputCodeResource = Join-Path $sourceRoot "Analysis\chinese-input-codes.txt.gz"
     "/resource:$keywordResource,ClassicalCipherToolbox.Analysis.EnglishKeywords" `
     "/resource:$telegraphResource,ClassicalCipherToolbox.Analysis.ChineseTelegraph" `
     "/resource:$inputCodeResource,ClassicalCipherToolbox.Analysis.ChineseInputCodes" `
+    "/resource:$chineseTableResource,ClassicalCipherToolbox.Analysis.ChineseCodeTables" `
+    "/resource:$chineseIdsResource,ClassicalCipherToolbox.Analysis.ChineseIds" `
     /out:$outputFile `
     $sources
 

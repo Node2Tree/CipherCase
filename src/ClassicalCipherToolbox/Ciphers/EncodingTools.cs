@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using ClassicalCipherToolbox.Analysis;
 using ClassicalCipherToolbox.Core;
 
@@ -165,23 +166,52 @@ namespace ClassicalCipherToolbox.Ciphers
     internal static class ChineseInputCode
     {
         internal static readonly string[] SchemeChoices = {
-            "汉语拼音", "汉语拼音（数字声调）", "拼音首字母", "注音", "粤拼", "仓颉", "速成", "四角号码", "总笔画"
+            "汉语拼音", "汉语拼音（数字声调）", "汉语拼音（声调符号）", "拼音首字母", "注音", "粤拼",
+            "自然码双拼", "智能ABC双拼", "小鹤双拼", "微软双拼", "拼音加加双拼", "四通双拼",
+            "仓颉", "速成", "五笔86", "五笔98", "郑码", "二笔", "表形码", "行列30", "大易四码", "嘸蝦米",
+            "笔顺五码", "小鹤音形", "自然码音形", "吴语拼音", "苏州吴语", "白话字 POJ", "台语注音", "台罗 TLPA",
+            "四角号码", "总笔画", "部首余笔", "康熙索引"
         };
 
         private sealed class Entry
         {
-            internal string Character, Mandarin, Cantonese, Cangjie, FourCorner, Strokes;
+            internal string Character, Mandarin, Cantonese, Cangjie, FourCorner, Strokes, RadicalStroke, Definition;
+            internal string Simplified, Traditional, Semantic, Compatibility, HanyuPinlu, HanyuPinyin, CheungBauer, Phonetic, KangXi;
         }
 
         private static readonly Dictionary<string, Entry> Entries = new Dictionary<string, Entry>();
         private static readonly Dictionary<string, Dictionary<string, List<string>>> Reverse = new Dictionary<string, Dictionary<string, List<string>>>();
+        private const string CommonCharacters = "的一是在不了有人我他这个们中来上大为和国地到以说时要就出会可也你对生能而子那得于着下自之年过发后作里用道行所然家种事成方多经么去法学如都同现当没动面起看定天分还进好小部其些主样理心她本前开但因只从想实日军者意无力它与长把机十民第公此已工使情明性知全三又关点正业外将两高间由问很最重并物手应战向头文体政美相见被利什二等产或新己制身果加西斯月话合回特代内信表化老给世位次度门任常先海通教儿原东声提立及比员解水名真论处走义各入几口认条平系气题活尔更别打女变四神总何电数安少报才结反受目太量再感建务做接必场件计管期市直德资命山金指克许统区保至队形社便空决治展马科司五基眼书非则听白却界达光放强即像难且权思王象完设式色路记南品住告类求据程北边死张该交规万取拉格望觉术领共确传师观清今切院让识候带导争运笑飞风步改收根干造言联持组每济车亲极林服快办议往元英士证近失转夫令准布始怎呢存未远叫台单影具罗字爱击流备兵连调深商算质团集百需价花党华城石级整府离况亚请技际约示复病息究线似官火断精满支视消越器容照须九增研写称企八功吗包片史委乎查轻易早曾除农找装广显吧阿李标谈吃图念六引历首医局突专费号尽另周较注语仅考落青随选列武红响虽推势参希古众构房半节土投某案黑维革划敌致陈律足态护七兴派孩验责营星够章音跟志底站严巴例防族供效续施留讲型料终答紧黄绝奇察母京段依批群项故按河米围江织害斗双境客纪采举杀攻父苏密低朝友诉止细愿千值仍男钱破网热助倒育属坐帝限船脸职速刻乐否刚威毛状率甚独球般普怕弹校苦创假久错承印晚兰试股拿脑预谁益阳若哪微尼继送急血惊伤素药适波夜省初喜卫源食险待述陆习置居劳财环排福纳欢雷警获模充负云停木游龙树疑层冷洲冲射略范竟句室异激汉村哈策演简卡罪判担州静退既衣您宗积余痛检差富灵协角占配征修皮挥胜降阶审沉坚善妈刘读啊超免压银买皇养伊怀执副乱抗犯追帮宣佛岁航优怪香著田铁控税左右份穿艺背阵草脚概恶块顿敢守酒岛托央户烈洋哥索胡款靠评版宝座释景顾弟登货互付伯慢欧换闻危忙核暗姐介坏讨丽良序升监临亮露永呼味野架域沙掉括舰鱼杂误湾吉减编楚肯测败屋跑梦散温困剑渐封救贵枪缺楼县尚毫移娘朋画班智亦耳恩短掌恐遗固席松秘谢鲁遇康虑幸均销钟诗藏赶剧票损忽巨炮旧端探湖录叶春乡附吸予礼港雨呀板庭妇归睛饭额含顺输摇招婚脱补谓督毒油疗旅泽材灭逐莫笔亡鲜词圣择寻厂睡博勒烟授诺伦岸奥唐卖俄炸载洛健堂旁宫喝借君禁阴园谋宋避抓荣姑孙逃牙束跳顶玉镇雪午练迫爷篇肉嘴馆遍凡础洞卷坦牛宁纸诸训私庄祖丝翻暴森塔默握戏隐熟骨访弱蒙店鬼软典欲萨伙遭盘爸扩盖弄雄稳忘亿刺拥徒姆杨齐赛趣曲刀床迎冰虚玩析窗醒妻透购替塞努休虎扬途侵刑绿兄迅套贸毕唯谷轮库迹尤竞街促延震弃甲伟麻川申缓潜闪售灯针哲络抵朱埃抱鼓植纯夏忍页杰筑折郑贝尊吴秀混臣雅振染盛怒舞圆搞狂措姓残秋培迷诚宽宇猛摆梅毁伸摩盟末乃悲拍丁赵硬麦蒋操耶阻订彩抽赞魔纷沿喊违妹浪汇币丰蓝殊献桌啦瓦莱援译夺汽烧距裁偏符勇触课哭懂墙袭召罚侠厅拜巧侧韩冒债曼融惯享戴童犹乘挂奖绍厚纵障讯涉彻刊丈爆乌役描洗玛患妙镜唱烦签仙彼弗症仿倾牌陷鸟轰咱菜闭奋庆撤泪茶疾缘播朗杜奶季丹狗尾仪偷奔珠虫驻孔宜艾桥淡翼恨繁寒伴叹旦愈潮粮缩罢聚径恰挑袋灰捕徐珍幕映裂泰隔启尖忠累炎暂估泛荒偿横拒瑞忆孤鼻闹羊呆厉衡胞零穷舍码赫婆魂灾洪腿胆津俗辩胸晓劲贫仁偶辑恢复较";
         private static bool loaded;
 
         internal static string Transform(string input, string scheme, bool reverse)
         {
             Load();
             string selected = string.IsNullOrWhiteSpace(scheme) ? SchemeChoices[0] : scheme;
+            if (ChineseCodeTables.IsScheme(selected)) return ChineseCodeTables.Transform(input, selected, reverse);
             return reverse ? ReverseLookup(input, selected) : Encode(input, selected);
+        }
+
+        internal static IList<string> CodesFor(string character, string scheme)
+        {
+            Load(); Entry entry;
+            return Entries.TryGetValue(character ?? string.Empty, out entry) ? Codes(entry, scheme) : new List<string>();
+        }
+
+        internal static string Metadata(string character, string field)
+        {
+            Load(); Entry e; if (!Entries.TryGetValue(character ?? string.Empty, out e)) return string.Empty;
+            if (field == "释义") return e.Definition; if (field == "部首余笔") return e.RadicalStroke; if (field == "康熙索引") return e.KangXi;
+            if (field == "简体异体") return e.Simplified; if (field == "繁体异体") return e.Traditional; if (field == "语义异体") return e.Semantic;
+            if (field == "兼容异体") return e.Compatibility; if (field == "汉语拼音位置") return e.HanyuPinyin; if (field == "频率读音") return e.HanyuPinlu;
+            if (field == "粤语资料") return e.CheungBauer; if (field == "注音资料") return e.Phonetic; return string.Empty;
+        }
+
+        internal static string NormalizePinyin(string value, out int tone) { return PlainPinyin(value, out tone); }
+        internal static string ToBopomofo(string pinyin, int tone) { return Bopomofo(pinyin, tone); }
+        internal static int MatchCount(string input, string scheme)
+        {
+            Load(); string[] raw = (input ?? string.Empty).Split(new[] { ' ', '\t', '\r', '\n', ',', '，' }, StringSplitOptions.RemoveEmptyEntries); HashSet<string> pending = new HashSet<string>(StringComparer.OrdinalIgnoreCase); foreach (string token in raw) pending.Add(NormalizeQuery(token, scheme)); if (pending.Count == 0) return 0; HashSet<string> found = new HashSet<string>(StringComparer.OrdinalIgnoreCase); foreach (Entry entry in Entries.Values) foreach (string code in Codes(entry, scheme)) { string normalized = NormalizeQuery(code, scheme); if (pending.Contains(normalized)) found.Add(normalized); } return found.Count;
         }
 
         private static string Encode(string input, string scheme)
@@ -208,7 +238,8 @@ namespace ClassicalCipherToolbox.Ciphers
                 string token = NormalizeQuery(raw, scheme); List<string> values;
                 if (output.Length > 0) output.Append("\r\n");
                 output.Append(raw).Append(" → ");
-                if (!index.TryGetValue(token, out values)) { output.Append("未收录"); continue; }
+                if (!index.TryGetValue(token, out values) && (token.IndexOf('*') >= 0 || token.IndexOf('?') >= 0)) { values = new List<string>(); Regex pattern = new Regex("^" + Regex.Escape(token).Replace("\\*", ".*").Replace("\\?", ".") + "$", RegexOptions.IgnoreCase); foreach (KeyValuePair<string, List<string>> pair in index) if (pattern.IsMatch(pair.Key)) foreach (string value in pair.Value) if (!values.Contains(value)) values.Add(value); values.Sort(CompareCharacters); }
+                if (values == null || values.Count == 0) { output.Append("未收录"); continue; }
                 int count = Math.Min(96, values.Count);
                 for (int i = 0; i < count; i++) output.Append(values[i]);
                 if (values.Count > count) output.Append(" …（共 ").Append(values.Count).Append(" 字）");
@@ -238,6 +269,8 @@ namespace ClassicalCipherToolbox.Ciphers
 
         private static int CompareCharacters(string left, string right)
         {
+            int commonLeft = CommonCharacters.IndexOf(left, StringComparison.Ordinal), commonRight = CommonCharacters.IndexOf(right, StringComparison.Ordinal);
+            if (commonLeft >= 0 || commonRight >= 0) { if (commonLeft < 0) return 1; if (commonRight < 0) return -1; if (commonLeft != commonRight) return commonLeft.CompareTo(commonRight); }
             int a = char.ConvertToUtf32(left, 0), b = char.ConvertToUtf32(right, 0);
             int ar = a >= 0x4E00 && a <= 0x9FFF ? 0 : a >= 0x3400 && a <= 0x4DBF ? 1 : 2;
             int br = b >= 0x4E00 && b <= 0x9FFF ? 0 : b >= 0x3400 && b <= 0x4DBF ? 1 : 2;
@@ -247,12 +280,13 @@ namespace ClassicalCipherToolbox.Ciphers
         private static List<string> Codes(Entry entry, string scheme)
         {
             List<string> result = new List<string>();
-            if (scheme == "汉语拼音" || scheme == "汉语拼音（数字声调）" || scheme == "拼音首字母" || scheme == "注音")
+            if (ChineseCodeTables.IsScheme(scheme)) foreach (string value in ChineseCodeTables.CodesFor(entry.Character, scheme)) AddUnique(result, value);
+            else if (scheme == "汉语拼音" || scheme == "汉语拼音（数字声调）" || scheme == "汉语拼音（声调符号）" || scheme == "拼音首字母" || scheme == "注音" || ChineseRomanization.IsDoublePinyin(scheme))
             {
                 foreach (string reading in Split(entry.Mandarin))
                 {
                     int tone; string plain = PlainPinyin(reading, out tone);
-                    string value = scheme == "汉语拼音" ? plain : scheme == "汉语拼音（数字声调）" ? plain + (tone > 0 ? tone.ToString(CultureInfo.InvariantCulture) : string.Empty) : scheme == "拼音首字母" ? (plain.Length > 0 ? plain.Substring(0, 1) : string.Empty) : Bopomofo(plain, tone);
+                    string value = scheme == "汉语拼音" ? plain : scheme == "汉语拼音（数字声调）" ? plain + (tone > 0 ? tone.ToString(CultureInfo.InvariantCulture) : string.Empty) : scheme == "汉语拼音（声调符号）" ? reading.ToLowerInvariant() : scheme == "拼音首字母" ? (plain.Length > 0 ? plain.Substring(0, 1) : string.Empty) : scheme == "注音" ? Bopomofo(plain, tone) : ChineseRomanization.DoublePinyin(plain, scheme);
                     AddUnique(result, value);
                 }
             }
@@ -261,6 +295,8 @@ namespace ClassicalCipherToolbox.Ciphers
             else if (scheme == "速成") foreach (string value in Split(entry.Cangjie)) { string code = value.ToUpperInvariant(); AddUnique(result, code.Length < 2 ? code : code.Substring(0, 1) + code.Substring(code.Length - 1)); }
             else if (scheme == "四角号码") foreach (string value in Split(entry.FourCorner)) AddUnique(result, value);
             else if (scheme == "总笔画") foreach (string value in Split(entry.Strokes)) AddUnique(result, value);
+            else if (scheme == "部首余笔") foreach (string value in Split(entry.RadicalStroke)) AddUnique(result, value);
+            else if (scheme == "康熙索引") foreach (string value in Split(entry.KangXi)) AddUnique(result, value);
             return result;
         }
 
@@ -269,7 +305,7 @@ namespace ClassicalCipherToolbox.Ciphers
         private static string NormalizeQuery(string value, string scheme)
         {
             string result = (value ?? string.Empty).Trim();
-            if (scheme == "汉语拼音" || scheme == "汉语拼音（数字声调）" || scheme == "拼音首字母") { int tone; string plain = PlainPinyin(result, out tone); return scheme == "汉语拼音（数字声调）" && tone > 0 ? plain + tone.ToString(CultureInfo.InvariantCulture) : plain; }
+            if (scheme == "汉语拼音" || scheme == "汉语拼音（数字声调）" || scheme == "汉语拼音（声调符号）" || scheme == "拼音首字母") { int tone; string plain = PlainPinyin(result, out tone); return scheme == "汉语拼音（数字声调）" && tone > 0 ? plain + tone.ToString(CultureInfo.InvariantCulture) : scheme == "汉语拼音（声调符号）" ? result.ToLowerInvariant() : plain; }
             if (scheme == "仓颉" || scheme == "速成") return result.ToUpperInvariant();
             return result.ToLowerInvariant();
         }
@@ -323,10 +359,12 @@ namespace ClassicalCipherToolbox.Ciphers
                     string[] fields = line.Split('\t'); int codepoint;
                     if (fields.Length < 6 || !int.TryParse(fields[0], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out codepoint)) continue;
                     string character = char.ConvertFromUtf32(codepoint);
-                    Entries[character] = new Entry { Character = character, Mandarin = fields[1], Cantonese = fields[2], Cangjie = fields[3], FourCorner = fields[4], Strokes = fields[5] };
+                    Entries[character] = new Entry { Character = character, Mandarin = fields[1], Cantonese = fields[2], Cangjie = fields[3], FourCorner = fields[4], Strokes = fields[5], RadicalStroke = Field(fields, 6), Definition = Field(fields, 7), Simplified = Field(fields, 8), Traditional = Field(fields, 9), Semantic = Field(fields, 10), Compatibility = Field(fields, 11), HanyuPinlu = Field(fields, 12), HanyuPinyin = Field(fields, 13), CheungBauer = Field(fields, 14), Phonetic = Field(fields, 15), KangXi = Field(fields, 16) };
                 }
             }
         }
+
+        private static string Field(string[] fields, int index) { return fields.Length > index ? fields[index] : string.Empty; }
     }
 
     internal static class NatoPhonetic

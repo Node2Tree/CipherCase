@@ -9,7 +9,7 @@ namespace ClassicalCipherToolbox.Core
         private static readonly string[] Order = { "常用", "可破解", "自动", "已知明文", "无密钥", "快速", "搜索型", "长搜索", "中文", "Unicode", "图形" };
         private static readonly HashSet<string> Popular = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "通用破解", "密码识别器", "分析工作台", "自动解码", "Base64", "十六进制", "URL 编码", "Morse", "中文输入法码",
+            "通用破解", "密码识别器", "分析工作台", "自动解码", "Base64", "十六进制", "URL 编码", "Morse", "中文编码工作台", "字符详情卡", "中文输入法码",
             "凯撒", "ROT13", "Atbash", "单表替换", "维吉尼亚", "Autokey", "栅栏", "列换位", "Polybius", "Playfair"
         };
         private static readonly HashSet<string> Automatic = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -62,8 +62,8 @@ namespace ClassicalCipherToolbox.Core
             if (ShortText.Contains(tool.Name)) result.Add("快速");
             if (search) result.Add("搜索型");
             if (longSearch) result.Add("长搜索");
-            if (Chinese.Contains(tool.Name)) result.Add("中文");
-            if (Unicode.Contains(tool.Name)) result.Add("Unicode");
+            if (Chinese.Contains(tool.Name) || tool.Category == ToolCategories.Chinese) result.Add("中文");
+            if (Unicode.Contains(tool.Name) || tool.Category == ToolCategories.Chinese) result.Add("Unicode");
             if (Visual.Contains(tool.Name)) result.Add("图形");
             return result;
         }
