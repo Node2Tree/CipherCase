@@ -122,6 +122,10 @@ namespace ClassicalCipherToolbox.Tests
             Check("ASCII85 Unicode round trip", unicode, TransferEncoding.Ascii85(TransferEncoding.Ascii85(unicode, false), true));
             Check("Quoted printable round trip", unicode, TransferEncoding.QuotedPrintable(TransferEncoding.QuotedPrintable(unicode, false), true));
             Check("GB18030 byte round trip", unicode, TransferEncoding.CharsetBytes(TransferEncoding.CharsetBytes(unicode, "GB18030", false), "GB18030", true));
+            for (int i = 0; i < TransferEncoding.CharsetChoices.Length - 1; i++) { string charset = TransferEncoding.CharsetChoices[i]; Check("Chinese charset round trip " + charset, "中文", TransferEncoding.CharsetBytes(TransferEncoding.CharsetBytes("中文", charset, false), charset, true)); }
+            Check("GB18030 supplementary round trip", "😀", TransferEncoding.CharsetBytes(TransferEncoding.CharsetBytes("😀", "GB18030", false), "GB18030", true));
+            bool gbkRejectedSupplementary = false; try { TransferEncoding.CharsetBytes("😀", "GBK / CP936", false); } catch (CipherException) { gbkRejectedSupplementary = true; } if (!gbkRejectedSupplementary) throw new Exception("GBK was still treated as GB18030"); passed++;
+            bool gb2312RejectedGbkExtension = false; try { TransferEncoding.CharsetBytes("漢", "GB2312 / EUC-CN", false); } catch (CipherException) { gb2312RejectedGbkExtension = true; } if (!gb2312RejectedGbkExtension) throw new Exception("GB2312 was still treated as GBK"); passed++;
             Check("Braille grade one round trip", "Hello 123", BrailleCode.Transform(BrailleCode.Transform("Hello 123", false), true));
             Check("Baudot ITA2 round trip", "HELLO 123", BaudotCode.Transform(BaudotCode.Transform("HELLO 123", false), true));
             Check("Chinese telegraph known values", "一丁七", ChineseTelegraphCode.Transform("0001 0002 0003", true));
@@ -131,6 +135,7 @@ namespace ClassicalCipherToolbox.Tests
             string ean = BarcodeCode.Transform("690123456789", "EAN13", false); Check("EAN13 round trip", "6901234567892", BarcodeCode.Transform(ean, "EAN13", true));
             string color = ColorEncoding.Text(unicode, false); Check("Color byte round trip", unicode, ColorEncoding.Text(color, true));
             string automatic = AutoDecoder.Decode(TransferEncoding.Base64("AUTOMATIC DECODING WORKS", false)); if (!automatic.StartsWith("#1", StringComparison.Ordinal) || automatic.IndexOf("AUTOMATIC DECODING WORKS", StringComparison.Ordinal) < 0) throw new Exception("Automatic decoder missed Base64"); passed++;
+            string gbkAutomatic = AutoDecoder.Decode(TransferEncoding.CharsetBytes("中文编码", "GBK / CP936", false)); if (gbkAutomatic.IndexOf("中文编码", StringComparison.Ordinal) < 0 || gbkAutomatic.IndexOf("GBK / CP936", StringComparison.Ordinal) < 0) throw new Exception("Automatic decoder missed GBK bytes"); passed++;
             string base64Sample = TransferEncoding.Base64("THIS IS A CLEAR BASE64 MESSAGE", false); if (!CipherIdentifier.Identify(base64Sample, string.Empty).StartsWith("#1  类型 Base64", StringComparison.Ordinal)) throw new Exception("Identifier missed Base64"); passed++;
             Dictionary<string, string> universalValues = new Dictionary<string, string> { { "language", "EN" }, { "effort", "快速" }, { "clue", string.Empty } }; string universalDecoded = UniversalCracker.Crack(new ToolRequest(ToolMode.Crack, base64Sample, universalValues)); if (universalDecoded.IndexOf("类型 Base64", StringComparison.Ordinal) < 0 || universalDecoded.IndexOf("THIS IS A CLEAR BASE64 MESSAGE", StringComparison.Ordinal) < 0 || universalDecoded.IndexOf("识别：#1  类型 Base64", StringComparison.Ordinal) < 0) throw new Exception("Universal crack did not include automatic Base64 decoding and identification"); passed++;
             string qrUniversal = UniversalCracker.Crack(new ToolRequest(ToolMode.Crack, QrCodeV1.Transform("HELLO QR", false), universalValues)); if (qrUniversal.IndexOf("类型 QR Code", StringComparison.Ordinal) < 0 || qrUniversal.IndexOf("HELLO QR", StringComparison.Ordinal) < 0) throw new Exception("Universal crack did not route identified QR to its decoder"); passed++;
@@ -496,7 +501,7 @@ namespace ClassicalCipherToolbox.Tests
                 Dictionary<string, TextBox> parameters = (Dictionary<string, TextBox>)typeof(CipherForm).GetField("parameterBoxes", flags).GetValue(form);
                 ComboBox category = (ComboBox)typeof(CipherForm).GetField("categoryPicker", flags).GetValue(form);
                 ComboBox tags = (ComboBox)typeof(CipherForm).GetField("tagPicker", flags).GetValue(form);
-                if (form.Text != "密码箱 1.1.9.1" || category.Items.Contains("全部") || !category.Items.Contains(ToolCategories.Encoding)) throw new Exception("Product version or concrete categories not applied");
+                if (form.Text != "密码箱 1.2.1" || category.Items.Contains("全部") || !category.Items.Contains(ToolCategories.Encoding)) throw new Exception("Product version or concrete categories not applied");
                 if (!tags.Items.Contains("常用") || !tags.Items.Contains("可破解") || tags.Items.Contains("全部")) throw new Exception("Tag picker was not populated");
                 passed++;
                 tags.SelectedItem = "可破解"; ComboBox taggedTools = (ComboBox)typeof(CipherForm).GetField("toolPicker", flags).GetValue(form); foreach (object item in taggedTools.Items) if (!((ICryptoTool)item).Modes.Contains(ToolMode.Crack)) throw new Exception("Tag picker retained a non-crackable tool"); tags.SelectedItem = ToolTags.Any; passed++;
@@ -536,6 +541,9 @@ namespace ClassicalCipherToolbox.Tests
                 if (tools.DropDownWidth < tools.Width) throw new Exception("Tool dropdown is narrower than its display field");
                 passed++;
                 category.SelectedItem = ToolCategories.Encoding;
+                for (int i = 0; i < tools.Items.Count; i++) if (((ICryptoTool)tools.Items[i]).Name == "字符集字节") { tools.SelectedIndex = i; break; }
+                typeof(CipherForm).GetMethod("SetMode", flags).Invoke(form, new object[] { ToolMode.Encode }); Application.DoEvents();
+                if (!parameterPickers.ContainsKey("charset") || parameterPickers["charset"].Items.Count != TransferEncoding.CharsetChoices.Length || !parameterPickers["charset"].Items.Contains("GBK / CP936") || !parameterPickers["charset"].Items.Contains("ISO-2022-CN / CP50227") || parameterPickers["charset"].DropDownWidth < parameterPickers["charset"].Width) throw new Exception("Published Chinese charset choices are incomplete or clipped"); passed++;
                 for (int i = 0; i < tools.Items.Count; i++) if (((ICryptoTool)tools.Items[i]).Name == "取色器与调色盘") { tools.SelectedIndex = i; break; }
                 typeof(CipherForm).GetMethod("SetMode", flags).Invoke(form, new object[] { ToolMode.Analyze });
                 input.Text = "#102030";

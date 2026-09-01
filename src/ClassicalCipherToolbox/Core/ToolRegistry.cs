@@ -231,7 +231,7 @@ namespace ClassicalCipherToolbox.Core
             AddCodec(tools, "ASCII85", TransferEncoding.Ascii85);
             AddCodec(tools, "Quoted-Printable", TransferEncoding.QuotedPrintable);
             AddCodec(tools, "Punycode", TransferEncoding.Punycode);
-            tools.Add(new DelegateCryptoTool("字符集字节", ToolCategories.Encoding, new[] { ToolMode.Encode, ToolMode.Decode }, new[] { new ToolParameter("charset", "字符集", false, ToolParameterEditor.Choice, "UTF-8", new[] { "UTF-8", "UTF-16", "GB18030", "Big5", "Shift_JIS" }) }, delegate(ToolRequest r) { return TransferEncoding.CharsetBytes(r.Input, r.Get("charset"), r.Mode == ToolMode.Decode); }));
+            tools.Add(new DelegateCryptoTool("字符集字节", ToolCategories.Encoding, new[] { ToolMode.Encode, ToolMode.Decode }, new[] { new ToolParameter("charset", "字符集", false, ToolParameterEditor.Choice, "UTF-8", TransferEncoding.CharsetChoices) }, delegate(ToolRequest r) { return TransferEncoding.CharsetBytes(r.Input, r.Get("charset"), r.Mode == ToolMode.Decode); }));
             AddCodec(tools, "盲文（英语一级）", BrailleCode.Transform);
             AddCodec(tools, "博多码 ITA2", BaudotCode.Transform);
             AddCodec(tools, "中文电报码", ChineseTelegraphCode.Transform);

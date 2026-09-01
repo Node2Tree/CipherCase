@@ -91,7 +91,7 @@ namespace ClassicalCipherToolbox
                 case "HTML 实体": return "编码或还原 HTML 特殊字符与字符引用。";
                 case "Quoted-Printable": return "转换邮件正文常用的 Quoted-Printable 传输格式。";
                 case "Punycode": return "在国际化域名与 ASCII 域名标签之间转换。";
-                case "字符集字节": return "按 UTF-8、UTF-16、GB18030、Big5、Shift_JIS 等字符集查看或还原十六进制字节。";
+                case "字符集字节": return "在 Unicode、国标简体、繁体与公开历史中文代码页之间转换文本和十六进制字节。";
                 case "盲文（英语一级）": return "在英语一级盲文 Unicode 点阵与普通字母、数字之间转换。";
                 case "博多码 ITA2": return "在文本与五单位 ITA2 电报码之间转换，自动插入字母/数字换挡码。";
                 case "中文电报码": return "使用内嵌的 Unihan 大陆四位电报码表转换 7078 个汉字。";
@@ -177,7 +177,7 @@ namespace ClassicalCipherToolbox
                 case "自动解码": return "把输入分别交给 Base64、Base64URL、Base32、Base58、ASCII85、十六进制、二进制、URL、HTML、Unicode 转义和 Quoted-Printable 解码器；有效结果再展开一层，并按可打印字符、空白、文字比例和语言形状排序。";
                 case "Base64": case "Base64URL": case "Base32": case "Base58": case "ASCII85": case "十六进制": case "二进制": return "先把文本编码为 UTF-8 字节，再把位组映射到相应的可打印字母表；解码按相反方向恢复字节和 UTF-8 文本。";
                 case "URL 编码": case "HTML 实体": case "Unicode 转义": case "Quoted-Printable": case "Punycode": return "按照对应传输格式的转义、标签或域名规则在 Unicode 文本与 ASCII 表示之间转换。";
-                case "字符集字节": return "使用所选字符编码把 Unicode 字符映射为字节，输出十六进制；反向操作把十六进制字节按同一字符集解释。";
+                case "字符集字节": return "使用所选字符编码把 Unicode 文本映射为字节，输出十六进制；反向操作把十六进制字节按同一字符集解释。GB2312/EUC-CN、GBK/CP936 与 GB18030 分别处理，不再互相替代。";
                 case "盲文（英语一级）": return "字母映射到 Unicode U+2800–U+28FF 盲文点阵；大写和连续数字使用前置指示符。";
                 case "博多码 ITA2": return "每个符号使用五位码；11111 切换到字母表，11011 切换到数字与标点表。";
                 case "中文电报码": return "每个已收录汉字映射到固定四位十进制代码；运行时从压缩的 Unihan kMainlandTelegraph 资源建立双向索引。";
@@ -238,7 +238,7 @@ namespace ClassicalCipherToolbox
                 case "分析工作台": return "输入“天地玄黄宇宙洪荒天地玄黄”，N 选 2，可直接得到汉字频率、“天地”等二元组、熵和周期 IC；输入拉丁文本时还会显示语言匹配方法与推测。";
                 case "自动解码": return "输入 U0dWc2JHOGdWMjl5YkdRPQ==，候选会显示 Base64 → Base64 的二层还原结果。";
                 case "Base64": return "密码箱 → 5a+G56CB566x；解码恢复“密码箱”。";
-                case "字符集字节": return "文本“中文”、字符集 GB18030 → D6D0CEC4；按 GB18030 解码该字节串可恢复原文。";
+                case "字符集字节": return "文本“中文”、字符集 GB18030 → D6D0CEC4；按同一字符集解码可恢复原文。可选 Unicode 大小端、GB2312/EUC-CN、GBK、GB18030、HZ、ISO-2022-CN、Big5，以及 Mac、CNS、TCA、ETen、IBM5550、TeleText、Wang 中文代码页。";
                 case "中文电报码": return "一丁七 → 0001 0002 0003。";
                 case "QR Code": return "输入 HELLO QR，编码后得到 21×21 矩阵和带静区的块状预览；把完整输出送入解码可恢复文本。";
                 case "条形码": return "类型 CODE39、内容 CODE39 可生成条纹；类型 EAN13、输入 690123456789 会自动补校验位 2。";
@@ -291,7 +291,7 @@ namespace ClassicalCipherToolbox
                 case "条形码": return "Code 39 支持数字、大写字母和 - . 空格 $ / + %；EAN-13 可输入 12 位让工具计算校验位，或输入含正确校验位的 13 位。";
                 case "中文电报码": return "大陆与台湾电报码存在差异。本工具使用 Unicode Unihan 的 kMainlandTelegraph 映射；未收录字符在编码时原样保留，未知数字在解码时用方括号标出。";
                 case "盲文（英语一级）": return "使用 Unicode 六点盲文、英语一级字母和数字符号；不展开英语二级盲文缩写。";
-                case "字符集字节": return "编码输出十六进制字节，解码输入可包含空格。UTF-16 默认遵循 .NET 的小端序；需要大端序时填写 UTF-16BE。";
+                case "字符集字节": return "编码输出十六进制字节，解码输入可包含空格。UTF-16LE/BE 与 UTF-32LE/BE 已分成独立选项。无法表示某字符或遇到非法字节时会停止并提示；长文本文件编辑器使用同一套字符集选择。";
                 case "密码识别器": return "匹配分由字符格式、文本结构、统计特征和试解语言得分共同生成。语言方法的适用条件：COSINE 适合约 10–60 个拉丁字母的稀疏短样本；LLR 适合约 40–240 字母并能更好处理稀有字母；CHI 适合约 200 字母以上、各期望频数较充分的样本；NGRAM 适合约 100 字母以上并用于区分频率相近的语言。AUTO 在少于 60 字母时选 COSINE，60–239 选 LLR，240 以上选 NGRAM。";
                 case "维吉尼亚": return "自动破解通常至少需要 30 个字母；几十字母只能作为线索，数百字母更可靠。部分密钥使用 ? 表示未知字符。自定义字母表会改变所有模运算。";
                 case "单表替换": return "锁定格式为 X=E,Q=T；非拉丁符号使用 Ж=E、Ω=T 等同样格式。语言 ZH 会自动比较四位 Unicode 十六进制与拼音载体，并优先排列汉字率和中文语言分较高的结果。中文模式的总搜索预算约六成用于 Unicode 十六进制映射，其余用于拼音；确认出现可读汉字后会缩短拼音支路。其他语言下，总预算在语言假设、字符模型搜索和联合分词搜索之间分配。";

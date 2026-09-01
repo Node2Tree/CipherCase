@@ -20,7 +20,7 @@ namespace ClassicalCipherToolbox
 
         internal HelpForm(string selectedTool)
         {
-            Text = "密码箱 1.1.9.1 · 文档"; StartPosition = FormStartPosition.CenterParent; FormBorderStyle = FormBorderStyle.Sizable; MaximizeBox = true; MinimizeBox = false; ShowInTaskbar = false;
+            Text = "密码箱 1.2.1 · 文档"; StartPosition = FormStartPosition.CenterParent; FormBorderStyle = FormBorderStyle.Sizable; MaximizeBox = true; MinimizeBox = false; ShowInTaskbar = false;
             ClientSize = new Size(900, 650); MinimumSize = new Size(650, 460); BackColor = Color.White; Font = new Font("Microsoft YaHei UI", 9F); AutoScaleMode = AutoScaleMode.Dpi; AutoScaleDimensions = new SizeF(96F, 96F);
 
             TableLayoutPanel root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(18, 14, 18, 14), ColumnCount = 1, RowCount = 2, BackColor = Color.White };

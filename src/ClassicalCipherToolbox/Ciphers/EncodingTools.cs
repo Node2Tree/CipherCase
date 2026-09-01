@@ -15,6 +15,12 @@ namespace ClassicalCipherToolbox.Ciphers
     {
         private const string Base32Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
         private const string Base58Alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+        internal static readonly string[] CharsetChoices = {
+            "UTF-8", "UTF-16LE", "UTF-16BE", "UTF-32LE", "UTF-32BE",
+            "GB18030", "GBK / CP936", "GB2312 / EUC-CN", "HZ-GB-2312", "ISO-2022-CN / CP50227",
+            "Big5 / CP950", "Mac 简体中文", "Mac 繁体中文", "CNS 11643", "TCA 台湾",
+            "Big5 ETen", "IBM5550 台湾", "TeleText 台湾", "Wang 台湾", "Shift_JIS"
+        };
 
         internal static string Base64(string input, bool decode) { try { return decode ? Encoding.UTF8.GetString(Convert.FromBase64String(Compact(input))) : Convert.ToBase64String(Encoding.UTF8.GetBytes(input ?? string.Empty)); } catch { throw new CipherException("Base64 格式无效"); } }
         internal static string Base64Url(string input, bool decode) { if (!decode) return Convert.ToBase64String(Encoding.UTF8.GetBytes(input ?? string.Empty)).TrimEnd('=').Replace('+', '-').Replace('/', '_'); string value = Compact(input).Replace('-', '+').Replace('_', '/'); value += new string('=', (4 - value.Length % 4) % 4); try { return Encoding.UTF8.GetString(Convert.FromBase64String(value)); } catch { throw new CipherException("Base64URL 格式无效"); } }
@@ -42,10 +48,45 @@ namespace ClassicalCipherToolbox.Ciphers
         }
         internal static string CharsetBytes(string input, string charset, bool decode)
         {
-            Encoding encoding; try { encoding = Encoding.GetEncoding(NormalizeCharset(charset), EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback); } catch { throw new CipherException("不支持该字符集"); }
-            try { return decode ? encoding.GetString(HexToBytes(input)) : BytesToHex(encoding.GetBytes(input ?? string.Empty)); } catch { throw new CipherException("文本或字节不符合所选字符集"); }
+            Encoding encoding; try { encoding = CharsetEncoding(charset); } catch { throw new CipherException("不支持该字符集"); }
+            try
+            {
+                if (decode) { byte[] bytes = HexToBytes(input); if (IsGb2312(charset)) ValidateGb2312(bytes); return encoding.GetString(bytes); }
+                byte[] encoded = encoding.GetBytes(input ?? string.Empty); if (IsGb2312(charset)) ValidateGb2312(encoded); return BytesToHex(encoded);
+            }
+            catch { throw new CipherException("文本或字节不符合所选字符集"); }
         }
-        private static string NormalizeCharset(string value) { string name = (value ?? string.Empty).Trim(); return name.Length == 0 ? "utf-8" : name.Replace("UTF8", "UTF-8").Replace("GBK", "GB18030"); }
+        internal static string CharsetText(byte[] bytes, string charset) { return CharsetBytes(BytesToHex(bytes ?? new byte[0]), charset, true); }
+        internal static Encoding CharsetEncoding(string value)
+        {
+            string name = (value ?? string.Empty).Trim(), key = name.ToUpperInvariant().Replace('_', '-');
+            if (key.Length == 0 || key == "UTF8" || key == "UTF-8") return new UTF8Encoding(false, true);
+            if (key == "UTF-16" || key == "UTF-16LE" || key == "UNICODE") return new UnicodeEncoding(false, false, true);
+            if (key == "UTF-16BE" || key == "UNICODEFFFE") return new UnicodeEncoding(true, false, true);
+            if (key == "UTF-32" || key == "UTF-32LE") return new UTF32Encoding(false, false, true);
+            if (key == "UTF-32BE") return new UTF32Encoding(true, false, true);
+            if (key == "GBK" || key == "CP936" || key.StartsWith("GBK /")) return StrictCodePage(936);
+            if (key == "GB2312" || key == "EUC-CN" || key.StartsWith("GB2312 /")) return StrictCodePage(936);
+            if (key == "GB18030") return StrictCodePage(54936);
+            if (key == "HZ-GB-2312" || key == "HZ-GB2312") return StrictCodePage(52936);
+            if (key == "ISO-2022-CN" || key == "CP50227" || key == "X-CP50227" || key.StartsWith("ISO-2022-CN /")) return StrictCodePage(50227);
+            if (key == "BIG5" || key == "CP950" || key.StartsWith("BIG5 /")) return StrictCodePage(950);
+            if (key == "MAC 简体中文" || key == "X-MAC-CHINESESIMP") return StrictCodePage(10008);
+            if (key == "MAC 繁体中文" || key == "X-MAC-CHINESETRAD") return StrictCodePage(10002);
+            if (key == "CNS 11643" || key == "X-CHINESE-CNS") return StrictCodePage(20000);
+            if (key == "TCA 台湾" || key == "X-CP20001") return StrictCodePage(20001);
+            if (key == "BIG5 ETEN" || key == "X-CHINESE-ETEN") return StrictCodePage(20002);
+            if (key == "IBM5550 台湾" || key == "X-CP20003") return StrictCodePage(20003);
+            if (key == "TELETEXT 台湾" || key == "X-CP20004") return StrictCodePage(20004);
+            if (key == "WANG 台湾" || key == "X-CP20005") return StrictCodePage(20005);
+            return Encoding.GetEncoding(name, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback);
+        }
+        private static Encoding StrictCodePage(int codePage) { return Encoding.GetEncoding(codePage, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback); }
+        private static bool IsGb2312(string value) { string key = (value ?? string.Empty).Trim().ToUpperInvariant().Replace('_', '-'); return key == "GB2312" || key == "EUC-CN" || key.StartsWith("GB2312 /"); }
+        private static void ValidateGb2312(byte[] bytes)
+        {
+            for (int i = 0; i < bytes.Length; i++) { if (bytes[i] <= 0x7F) continue; if (i + 1 >= bytes.Length || bytes[i] < 0xA1 || bytes[i] > 0xF7 || bytes[i + 1] < 0xA1 || bytes[i + 1] > 0xFE) throw new EncoderFallbackException(); i++; }
+        }
         internal static string BytesToHex(byte[] bytes) { StringBuilder result = new StringBuilder(bytes.Length * 2); foreach (byte b in bytes) result.Append(b.ToString("X2", CultureInfo.InvariantCulture)); return result.ToString(); }
         internal static byte[] HexToBytes(string input) { string value = CompactHex(input); if (value.Length == 0 || value.Length % 2 != 0) throw new FormatException(); byte[] bytes = new byte[value.Length / 2]; for (int i = 0; i < bytes.Length; i++) bytes[i] = byte.Parse(value.Substring(i * 2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture); return bytes; }
         private static string Compact(string input) { StringBuilder result = new StringBuilder(); foreach (char c in input ?? string.Empty) if (!char.IsWhiteSpace(c)) result.Append(c); return result.ToString(); }
@@ -68,7 +109,13 @@ namespace ClassicalCipherToolbox.Ciphers
         {
             List<KeyValuePair<string, Decoder>> decoders = new List<KeyValuePair<string, Decoder>> {
                 Pair("Base64", delegate(string s){return TransferEncoding.Base64(s,true);}), Pair("Base64URL", delegate(string s){return TransferEncoding.Base64Url(s,true);}), Pair("Base32", delegate(string s){return TransferEncoding.Base32(s,true);}), Pair("Hex/UTF-8", delegate(string s){return TransferEncoding.Hex(s,true);}), Pair("二进制/UTF-8", delegate(string s){return TransferEncoding.Binary(s,true);}), Pair("URL", delegate(string s){return TransferEncoding.Url(s,true);}), Pair("HTML 实体", delegate(string s){return TransferEncoding.Html(s,true);}), Pair("Unicode 转义", delegate(string s){return TransferEncoding.UnicodeEscape(s,true);}), Pair("Quoted-Printable", delegate(string s){return TransferEncoding.QuotedPrintable(s,true);}), Pair("Base58", delegate(string s){return TransferEncoding.Base58(s,true);}), Pair("ASCII85", delegate(string s){return TransferEncoding.Ascii85(s,true);}) };
+            string[] chineseCharsets = { TransferEncoding.CharsetChoices[6], TransferEncoding.CharsetChoices[5], TransferEncoding.CharsetChoices[7], TransferEncoding.CharsetChoices[8], TransferEncoding.CharsetChoices[9], TransferEncoding.CharsetChoices[10], TransferEncoding.CharsetChoices[11], TransferEncoding.CharsetChoices[12], TransferEncoding.CharsetChoices[13], TransferEncoding.CharsetChoices[14], TransferEncoding.CharsetChoices[15], TransferEncoding.CharsetChoices[16], TransferEncoding.CharsetChoices[17], TransferEncoding.CharsetChoices[18] };
+            foreach (string value in chineseCharsets) { string charset = value; decoders.Add(Pair("Hex/" + charset, delegate(string s) { return DecodeCharsetHex(s, charset); })); }
             List<Candidate> values = new List<Candidate>(); foreach (KeyValuePair<string, Decoder> decoder in decoders) TryAdd(values, decoder.Key, input, decoder.Value); List<Candidate> first = new List<Candidate>(values); foreach (Candidate outer in first) foreach (KeyValuePair<string, Decoder> decoder in decoders) TryAdd(values, outer.Name + " → " + decoder.Key, outer.Text, decoder.Value); values.Sort(delegate(Candidate a, Candidate b) { return b.Score.CompareTo(a.Score); }); if (values.Count == 0) return "没有发现可直接还原的常见编码"; StringBuilder output = new StringBuilder(); for (int i = 0; i < Math.Min(20, values.Count); i++) { if (i > 0) output.Append("\r\n\r\n"); output.Append('#').Append(i + 1).Append("  类型 ").Append(values[i].Name).Append("  评分 ").Append(values[i].Score.ToString("0.0", CultureInfo.InvariantCulture)).Append("\r\n明文：").Append(values[i].Text); } return output.ToString();
+        }
+        private static string DecodeCharsetHex(string input, string charset)
+        {
+            int digits = 0; foreach (char c in input ?? string.Empty) { if (Uri.IsHexDigit(c)) digits++; else if (!char.IsWhiteSpace(c) && c != '-' && c != ':' && c != ',') throw new FormatException(); } if (digits < 2 || digits % 2 != 0) throw new FormatException(); return TransferEncoding.CharsetBytes(input, charset, true);
         }
         private static KeyValuePair<string, Decoder> Pair(string name, Decoder decoder) { return new KeyValuePair<string, Decoder>(name, decoder); }
         private static void TryAdd(List<Candidate> values, string name, string input, Decoder decoder) { try { string text = decoder(input); if (string.IsNullOrEmpty(text) || text == input || Bad(text)) return; foreach (Candidate old in values) if (old.Text == text) return; values.Add(new Candidate { Name = name, Text = text, Score = Readable(text) }); } catch { } }

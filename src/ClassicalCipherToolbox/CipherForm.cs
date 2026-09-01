@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using ClassicalCipherToolbox.Ciphers;
 using ClassicalCipherToolbox.Core;
 
 namespace ClassicalCipherToolbox
@@ -55,7 +56,7 @@ namespace ClassicalCipherToolbox
 
         internal CipherForm()
         {
-            Text = "密码箱 1.1.9.1";
+            Text = "密码箱 1.2.1";
             StartPosition = FormStartPosition.CenterScreen;
             MinimumSize = new Size(800, 600);
             ClientSize = new Size(960, 700);
@@ -298,7 +299,7 @@ namespace ClassicalCipherToolbox
                 if (parameter.Id == "crib" || parameter.Id == "clue") cardWidth = Math.Max(cardWidth, 300);
                 if (parameter.Editor == ToolParameterEditor.Choice)
                 {
-                    ComboBox picker = CreatePicker(cardWidth); picker.Items.AddRange(parameter.Choices); if (picker.Items.Count > 0) picker.SelectedIndex = 0;
+                    ComboBox picker = CreatePicker(cardWidth); picker.Items.AddRange(parameter.Choices); if (picker.Items.Count > 0) picker.SelectedIndex = 0; UpdatePickerDropDownWidth(picker);
                     if (!string.IsNullOrEmpty(parameter.DefaultValue) && picker.Items.Contains(parameter.DefaultValue)) picker.SelectedItem = parameter.DefaultValue;
                     picker.SelectedIndexChanged += delegate { ScheduleLiveUpdate(); }; parameterPickers[parameter.Id] = picker; box = picker; editor = picker;
                 }
@@ -763,7 +764,7 @@ namespace ClassicalCipherToolbox
                 Button cancel = CreateButton("取消", 72, false); cancel.DialogResult = DialogResult.Cancel; cancel.Margin = new Padding(6, 0, 0, 0); actions.Controls.Add(cancel);
                 Button clear = CreateButton("清空", 64, false); clear.Margin = new Padding(6, 0, 0, 0); clear.Click += delegate { loadedFile = string.Empty; editor.Clear(); }; actions.Controls.Add(clear);
                 Button paste = CreateButton("粘贴", 64, false); paste.Margin = new Padding(6, 0, 0, 0); paste.Click += delegate { try { if (Clipboard.ContainsText()) editor.SelectedText = Clipboard.GetText(); } catch (ExternalException) { } }; actions.Controls.Add(paste);
-                encodingPicker = CreatePicker(100); encodingPicker.Items.AddRange(new object[] { "自动", "UTF-8", "UTF-16", "GB18030", "Big5", "Shift_JIS" }); encodingPicker.SelectedIndex = 0; encodingPicker.Margin = new Padding(6, 0, 0, 0); actions.Controls.Add(encodingPicker);
+                encodingPicker = CreatePicker(190); encodingPicker.Items.Add("自动"); encodingPicker.Items.AddRange(TransferEncoding.CharsetChoices); encodingPicker.SelectedIndex = 0; encodingPicker.Margin = new Padding(6, 0, 0, 0); actions.Controls.Add(encodingPicker);
                 Button open = CreateButton("打开", 64, false); open.Margin = new Padding(6, 0, 0, 0); open.Click += delegate { OpenTextFile(); }; actions.Controls.Add(open);
                 layout.Controls.Add(stats, 0, 0); layout.Controls.Add(editor, 0, 1); layout.Controls.Add(actions, 0, 2);
                 DragEnter += FileDragEnter; DragDrop += FileDragDrop; AcceptButton = ok; CancelButton = cancel;
@@ -786,8 +787,7 @@ namespace ClassicalCipherToolbox
             {
                 string name = string.IsNullOrEmpty(encodingName) ? "自动" : encodingName;
                 if (name == "自动") using (StreamReader reader = new StreamReader(path, Encoding.UTF8, true)) return reader.ReadToEnd();
-                Encoding encoding = name == "UTF-8" ? new UTF8Encoding(false, true) : name == "UTF-16" ? Encoding.Unicode : Encoding.GetEncoding(name);
-                return File.ReadAllText(path, encoding);
+                return TransferEncoding.CharsetText(File.ReadAllBytes(path), name);
             }
             private void FileDragEnter(object sender, DragEventArgs eventArgs) { if (eventArgs.Data.GetDataPresent(DataFormats.FileDrop)) eventArgs.Effect = DragDropEffects.Copy; }
             private void FileDragDrop(object sender, DragEventArgs eventArgs) { string[] files = eventArgs.Data.GetData(DataFormats.FileDrop) as string[]; if (files != null && files.Length > 0) LoadTextFile(files[0]); }
