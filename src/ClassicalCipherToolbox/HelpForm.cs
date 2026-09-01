@@ -14,9 +14,13 @@ namespace ClassicalCipherToolbox
         private readonly TreeView index;
         private readonly RichTextBox details;
 
-        internal HelpForm()
+        internal HelpForm() : this(null)
         {
-            Text = "密码箱 1.1.6 · 文档"; StartPosition = FormStartPosition.CenterParent; FormBorderStyle = FormBorderStyle.Sizable; MaximizeBox = true; MinimizeBox = false; ShowInTaskbar = false;
+        }
+
+        internal HelpForm(string selectedTool)
+        {
+            Text = "密码箱 1.1.8 · 文档"; StartPosition = FormStartPosition.CenterParent; FormBorderStyle = FormBorderStyle.Sizable; MaximizeBox = true; MinimizeBox = false; ShowInTaskbar = false;
             ClientSize = new Size(900, 650); MinimumSize = new Size(650, 460); BackColor = Color.White; Font = new Font("Microsoft YaHei UI", 9F); AutoScaleMode = AutoScaleMode.Dpi; AutoScaleDimensions = new SizeF(96F, 96F);
 
             TableLayoutPanel root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(18, 14, 18, 14), ColumnCount = 1, RowCount = 2, BackColor = Color.White };
@@ -38,11 +42,18 @@ namespace ClassicalCipherToolbox
             }
             foreach (TreeNode group in index.Nodes) group.Expand();
             index.AfterSelect += delegate(object sender, TreeViewEventArgs e) { ICryptoTool tool = e.Node.Tag as ICryptoTool; if (tool != null) Render(tool); };
-            if (index.Nodes.Count > 0 && index.Nodes[0].Nodes.Count > 0)
+            TreeNode initial = FindToolNode(selectedTool);
+            if (initial == null && index.Nodes.Count > 0 && index.Nodes[0].Nodes.Count > 0) initial = index.Nodes[0].Nodes[0];
+            if (initial != null)
             {
-                index.SelectedNode = index.Nodes[0].Nodes[0];
-                Render((ICryptoTool)index.SelectedNode.Tag);
+                index.SelectedNode = initial;
+                Render((ICryptoTool)initial.Tag);
             }
+        }
+
+        private TreeNode FindToolNode(string toolName)
+        {
+            if (string.IsNullOrEmpty(toolName)) return null; foreach (TreeNode group in index.Nodes) foreach (TreeNode node in group.Nodes) if (node.Text == toolName) return node; return null;
         }
 
         private void Render(ICryptoTool tool)

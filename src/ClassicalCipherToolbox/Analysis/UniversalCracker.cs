@@ -44,7 +44,7 @@ namespace ClassicalCipherToolbox.Analysis
         {
             List<Job> jobs = new List<Job>(); foreach (ICryptoTool tool in ToolRegistry.CreateAll())
             {
-                if (tool.Name == "通用破解" || tool.Name == "密码识别器" || tool.Name == "Crib 工具") continue; int tier = DeepTools.Contains(tool.Name) ? 2 : FastTools.Contains(tool.Name) ? 0 : 1, compatibility = Compatibility(tool.Name, identifier, input); bool forced = AlgorithmHintMatches(tool.Name, clue.Algorithm), promoted = IsPrimaryIdentification(tool.Name, identifier); if ((tier > effort && !forced && !promoted) || (!forced && !promoted && !Eligible(tool.Name, input))) continue; if (forced) compatibility = Math.Max(compatibility, 100); int jobEffort = tier > effort ? tier : effort;
+                if (tool.Name == "通用破解" || tool.Name == "密码识别器" || tool.Name == "Crib 工具") continue; int tier = DeepTools.Contains(tool.Name) ? 2 : FastTools.Contains(tool.Name) ? 0 : 1, compatibility = Compatibility(tool.Name, identifier, input); bool forced = AlgorithmHintMatches(tool.Name, clue.Algorithm), promoted = IsPromotedIdentification(tool.Name, identifier); if ((tier > effort && !forced && !promoted) || (!forced && !promoted && !Eligible(tool.Name, input))) continue; if (forced) compatibility = Math.Max(compatibility, 100); int jobEffort = tier > effort ? tier : effort;
                 if (tool.Modes.Contains(ToolMode.Crack) && HasRequired(tool, ToolMode.Crack, clue.Plaintext))
                 {
                     Dictionary<string, string> values = DefaultValues(language, jobEffort, clue.Plaintext); jobs.Add(new Job { Tool = tool, Mode = ToolMode.Crack, Label = tool.Name, Compatibility = compatibility, Values = values });
@@ -109,13 +109,20 @@ namespace ClassicalCipherToolbox.Analysis
         {
             int best = 48; string[] lines = (identifier ?? string.Empty).Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries); foreach (string line in lines) { if (line.IndexOf("类型 ", StringComparison.Ordinal) < 0 || !Related(name, line)) continue; int at = line.IndexOf("匹配 ", StringComparison.Ordinal); if (at >= 0) { int start = at + 3, end = start; while (start < line.Length && char.IsWhiteSpace(line[start])) start++; end = start; while (end < line.Length && char.IsDigit(line[end])) end++; int value; if (end > start && int.TryParse(line.Substring(start, end - start), out value)) best = Math.Max(best, value); } } if (name == "单表替换" && LooksChineseCarrier(input)) best = Math.Max(best, 92); return best;
         }
-        private static bool IsPrimaryIdentification(string name, string identifier) { return Related(name, FirstLine(identifier ?? string.Empty)); }
+        private static bool IsPromotedIdentification(string name, string identifier)
+        {
+            int rank = 0; foreach (string line in (identifier ?? string.Empty).Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (!line.StartsWith("#", StringComparison.Ordinal) || line.IndexOf("类型 ", StringComparison.Ordinal) < 0) continue; rank++; if (rank > 3) return false; if (Related(name, line)) return true;
+            }
+            return false;
+        }
         private static bool AlgorithmHintMatches(string name, string hint) { return hint.Length > 0 && (name.IndexOf(hint, StringComparison.OrdinalIgnoreCase) >= 0 || Related(name, "类型 " + hint)); }
         private static bool Related(string name, string line) { if (line.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0) return true; if (name == "Vigenere" && line.IndexOf("维吉尼亚", StringComparison.Ordinal) >= 0) return true; if (name == "Rail Fence" && line.IndexOf("栅栏", StringComparison.Ordinal) >= 0) return true; if (name == "单表替换" && line.IndexOf("单表", StringComparison.Ordinal) >= 0) return true; if (name == "列换位" && line.IndexOf("换位", StringComparison.Ordinal) >= 0) return true; return false; }
 
         private static List<Result> Parse(Job job, string output, string input, string language, string clue, int effort, long milliseconds)
         {
-            List<Result> result = new List<Result>(); if (string.IsNullOrWhiteSpace(output)) return result; List<string> blocks = Blocks(output); int limit = effort == 0 ? 1 : effort == 1 ? 2 : 3; for (int i = 0; i < blocks.Count && result.Count < limit; i++) { string plain = PlainText(blocks[i]); if (plain.Length < 2) continue; string header = FirstLine(blocks[i]), parameter = Field(header, "密钥 "), type = job.Label; if (parameter.Length == 0) parameter = Field(header, "参数 "); if (job.Tool.Name == "自动解码") { string decodedType = Field(header, "类型 "); if (decodedType.Length > 0) type = decodedType; } Result item = BuildResult(type, plain, parameter, blocks[i], job.Compatibility, milliseconds, input, language, clue); result.Add(item); } return result;
+            List<Result> result = new List<Result>(); if (string.IsNullOrWhiteSpace(output)) return result; List<string> blocks = Blocks(output); int limit = job.Compatibility >= 58 ? 12 : effort == 0 ? 2 : effort == 1 ? 4 : 6; for (int i = 0; i < blocks.Count && result.Count < limit; i++) { string plain = PlainText(blocks[i]); if (plain.Length < 2) continue; string header = FirstLine(blocks[i]), parameter = Field(header, "密钥 "), type = job.Label; if (parameter.Length == 0) parameter = Field(header, "参数 "); if (job.Tool.Name == "自动解码") { string decodedType = Field(header, "类型 "); if (decodedType.Length > 0) type = decodedType; } Result item = BuildResult(type, plain, parameter, blocks[i], job.Compatibility, milliseconds, input, language, clue); result.Add(item); } return result;
         }
 
         private static Result BuildResult(string type, string plain, string parameter, string detail, int compatibility, long milliseconds, string input, string language, string clue)

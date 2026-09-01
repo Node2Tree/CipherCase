@@ -201,14 +201,15 @@ namespace ClassicalCipherToolbox
         internal static string GetUsage(ICryptoTool tool)
         {
             if (tool.Name == "通用破解")
-                return "1. 粘贴或拖入密文。\r\n2. 不确定语言时保留 AUTO；中文原文或中文编码选择 ZH。\r\n3. 一般先用“标准”。识别器首位命中的密码会自动加入搜索，即使它原本属于“深入”档。\r\n4. 有线索时点击“线索”：算法名称和已知明文分别填写，窗口会自动生成正确格式。明文填连续原文，不加引号。\r\n5. 候选会逐项出现；首个候选同时显示本轮自动识别的首位类型。单击查看全文，双击进入对应工具继续调整；“识别”可保留输入返回识别器。";
+                return "1. 粘贴或拖入密文。\r\n2. 不确定语言时保留 AUTO；中文原文或中文编码选择 ZH。\r\n3. 一般先用“标准”。识别器前三项命中的密码家族会加入搜索，即使它们原本属于更深档位。\r\n4. 有线索时点击“线索”：算法名称和已知明文分别填写，窗口会自动生成正确格式。明文填连续原文，不加引号。\r\n5. 候选会逐项出现；高匹配算法会保留更多内部候选，避免正确答案因单算法预排名较低而消失。单击查看全文，双击进入对应工具继续调整。";
             StringBuilder result = new StringBuilder();
             result.Append("1. 在主窗口选择“").Append(tool.Category).Append(" → ").Append(tool.Name).Append("”；也可先选标签缩小工具列表。\r\n");
             result.Append("2. 选择所需模式并填写该模式显示的参数；标为必填的参数不能为空。\r\n");
+            if (tool.Name == "Book Cipher" || tool.Name == "Nomenclator" || tool.Name == "Running Key" || tool.Name == "VIC") result.Append("   长文本参数可双击输入框或点击 … 打开可缩放编辑器，并可读取文本文件。\r\n");
             result.Append("3. 输入或拖入文本。停止输入后会自动处理。\r\n");
             if (tool.Modes.Contains(ToolMode.Crack)) result.Append("4. 破解结果显示在候选面板；选择候选可查看对应明文、密钥和评分。带已知明文参数时点击“明文”使用可缩放编辑器；长搜索在窗口底部显示进度，点击 × 可取消。\r\n");
             else result.Append("4. 输出区实时显示结果；“互换”可把结果送回输入区。\r\n");
-            result.Append("5. “识别”和“通用”保留当前输入并在识别器、通用破解和本工具之间切换。\r\n");
+            result.Append("5. “识别”和“通用”保留当前输入并在识别器、通用破解和本工具之间切换；顶部 ? 直接打开当前工具的说明。\r\n");
             return result.ToString();
         }
 
@@ -232,7 +233,7 @@ namespace ClassicalCipherToolbox
                 case "Solitaire": return "口令 CRYPTONOMICON；使用同一口令再次解密可恢复原文。";
                 case "A1Z26": return "HELLO → 8-5-12-12-15。";
                 case "Morse": return "SOS → ... --- ...；单词之间使用 /。";
-                case "单表替换": return "目标为中文编码时把语言填为 ZH。四位 Unicode 十六进制候选显示密文表、0–F 映射、汉字率和解码文本；拼音候选显示符号到字母的映射、音节分词、音节覆盖率和原始拼音流。";
+                case "单表替换": return "加解密时可直接粘贴 QWERTYUIOPASDFGHJKLZXCVBNM 这样的 26 字母替换表，也可点击 …，按 A 到 Z 的位置逐格填写。破解中文编码时把语言设为 ZH；结果会显示映射、汉字率或拼音分词。";
                 case "Polybius": case "Tap Code": return "HELLO 在标准 5×5 方阵中转换为成对行列数字；J 会按 I 处理。";
                 case "分析工作台": return "输入“天地玄黄宇宙洪荒天地玄黄”，N 选 2，可直接得到汉字频率、“天地”等二元组、熵和周期 IC；输入拉丁文本时还会显示语言匹配方法与推测。";
                 case "自动解码": return "输入 U0dWc2JHOGdWMjl5YkdRPQ==，候选会显示 Base64 → Base64 的二层还原结果。";
@@ -243,6 +244,9 @@ namespace ClassicalCipherToolbox
                 case "条形码": return "类型 CODE39、内容 CODE39 可生成条纹；类型 EAN13、输入 690123456789 会自动补校验位 2。";
                 case "取色器与调色盘": return "点击“取色”，或输入 #3366CC；结果显示 RGB、HSL、互补色、邻近色和三角色。";
                 case "Hill 3×3": return "密钥 6,24,1,13,16,10,20,17,15：ACT → POH。破解时填写从密文开头对齐、至少 9 个字母的已知明文。";
+                case "Book Cipher": return "点击书本参数后的 …，输入或打开包含 ALPHA BRAVO CHARLIE … ZULU 的文本。明文 DEFEND 会生成“词.字母”坐标；解密时使用完全相同的书本文本。";
+                case "Nomenclator": return "点击码表参数后的 …，按行或用分号填写 KING=42、ARMY=731。明文 KING ARMY → 42 731。";
+                case "Running Key": return "明文 ATTACKATDAWN，密钥文本 THISISALONGKEYTEXT。密钥可以在可缩放编辑器中粘贴或从文件读取，并须至少覆盖明文字母数。";
                 default: return "先用一小段容易辨认的文本加密，再使用完全相同的参数解密。解密结果应与该算法规范化后的输入一致。";
             }
         }
@@ -281,7 +285,7 @@ namespace ClassicalCipherToolbox
         {
             switch (name)
             {
-                case "通用破解": return "快速覆盖编码和秒级破解器；标准加入常用的多表、换位与方阵破解；深入使用更大的搜索预算。识别器排名首位的家族和“算法:”指定的家族会跨档加入当前搜索。AUTO 用于未知拉丁语言；中文原文或中文编码选择 ZH。“明文:”内容只作为连续明文约束和排序依据，“算法:”内容只控制密码家族。";
+                case "通用破解": return "快速覆盖编码和秒级破解器；标准加入常用的多表、换位与方阵破解；深入使用更大的搜索预算。识别器前三项的家族和“算法:”指定的家族会跨档加入当前搜索；高匹配家族保留更多内部候选。AUTO 用于未知拉丁语言；中文原文或中文编码选择 ZH。“明文:”内容作为连续明文约束和排序依据，“算法:”内容控制密码家族。";
                 case "自动解码": return "最多展开两层编码，并拒绝控制字符过多或与输入相同的结果。评分表示文本可读性，不代表编码类型的密码学置信度。";
                 case "QR Code": return "当前实现固定为 QR Version 1-L、UTF-8 字节模式，容量为 17 字节。矩阵包含真实纠错码和格式信息；解码入口读取本工具输出的 21×21 0/1 矩阵。";
                 case "条形码": return "Code 39 支持数字、大写字母和 - . 空格 $ / + %；EAN-13 可输入 12 位让工具计算校验位，或输入含正确校验位的 13 位。";

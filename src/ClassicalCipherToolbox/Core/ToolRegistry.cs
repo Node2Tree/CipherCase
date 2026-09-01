@@ -114,7 +114,7 @@ namespace ClassicalCipherToolbox.Core
             MonoalphabeticCipher cipher = new MonoalphabeticCipher();
             tools.Add(new DelegateCryptoTool(cipher.Name, ToolCategories.Substitution,
                 new[] { ToolMode.Encrypt, ToolMode.Decrypt, ToolMode.Crack },
-                new[] { new ToolParameter("key", cipher.KeyHint, true, ToolMode.Encrypt, ToolMode.Decrypt), LanguageParameter(), MatchMethodParameter(ToolMode.Crack), new ToolParameter("locks", "锁定映射 X=E 或 Ж=E", false, ToolMode.Crack), new ToolParameter("iterations", "总搜索预算，默认 30000", false, ToolMode.Crack) },
+                new[] { new ToolParameter("key", cipher.KeyHint, true, ToolParameterEditor.Alphabet, string.Empty, null, ToolMode.Encrypt, ToolMode.Decrypt), LanguageParameter(), MatchMethodParameter(ToolMode.Crack), new ToolParameter("locks", "锁定映射 X=E 或 Ж=E", false, ToolMode.Crack), new ToolParameter("iterations", "总搜索预算，默认 30000", false, ToolMode.Crack) },
                 delegate(ToolRequest request)
                 {
                     if (request.Mode == ToolMode.Crack) return ClassicalAnalysis.CrackMonoalphabetic(request.Input, request.Get("language"), request.Get("locks"), request.Get("iterations"), request.Get("method"), request.ReportProgress, delegate { return request.IsCancellationRequested; });
@@ -180,7 +180,7 @@ namespace ClassicalCipherToolbox.Core
             AddCrackableCipher(tools, new PortaCipher(), ToolCategories.Polyalphabetic, ClassicalAnalysis.CrackPorta);
             AddCrackableCipher(tools, new GronsfeldCipher(), ToolCategories.Polyalphabetic, ClassicalAnalysis.CrackGronsfeld);
             RunningKeyCipher runningKey = new RunningKeyCipher();
-            tools.Add(new DelegateCryptoTool(runningKey.Name,ToolCategories.Polyalphabetic,new[]{ToolMode.Encrypt,ToolMode.Decrypt,ToolMode.Crack},new[]{new ToolParameter("key",runningKey.KeyHint,true,ToolMode.Encrypt,ToolMode.Decrypt),new ToolParameter("crib","完整明文或从开头对齐的片段",false,ToolMode.Crack),LanguageParameter(),SearchIterations(),SearchRestarts()},delegate(ToolRequest r){if(r.Mode==ToolMode.Crack)return ExpansionCrackers.CrackRunningKey(r);return r.Mode==ToolMode.Encrypt?runningKey.Encrypt(r.Input,r.Get("key")):runningKey.Decrypt(r.Input,r.Get("key"));}));
+            tools.Add(new DelegateCryptoTool(runningKey.Name,ToolCategories.Polyalphabetic,new[]{ToolMode.Encrypt,ToolMode.Decrypt,ToolMode.Crack},new[]{new ToolParameter("key",runningKey.KeyHint,true,ToolParameterEditor.LongTextFile,string.Empty,null,ToolMode.Encrypt,ToolMode.Decrypt),new ToolParameter("crib","完整明文或从开头对齐的片段",false,ToolMode.Crack),LanguageParameter(),SearchIterations(),SearchRestarts()},delegate(ToolRequest r){if(r.Mode==ToolMode.Crack)return ExpansionCrackers.CrackRunningKey(r);return r.Mode==ToolMode.Encrypt?runningKey.Encrypt(r.Input,r.Get("key")):runningKey.Decrypt(r.Input,r.Get("key"));}));
             tools.Add(new DelegateCryptoTool("Four-square",ToolCategories.Grid,new[]{ToolMode.Encrypt,ToolMode.Decrypt,ToolMode.Crack},new[]{new ToolParameter("key1","方阵关键词 1",true,ToolMode.Encrypt,ToolMode.Decrypt),new ToolParameter("key2","方阵关键词 2",true,ToolMode.Encrypt,ToolMode.Decrypt),LanguageParameter(),SearchHeuristic(),SearchIterations(),SearchRestarts()},delegate(ToolRequest r){if(r.Mode==ToolMode.Crack)return AdvancedCrackers.CrackFourSquare(r);return FourSquareCipher.Transform(r.Input,r.Get("key1"),r.Get("key2"),r.Mode==ToolMode.Decrypt);}));
             tools.Add(new DelegateCryptoTool("Two-square",ToolCategories.Grid,new[]{ToolMode.Encrypt,ToolMode.Decrypt,ToolMode.Crack},new[]{new ToolParameter("key1","方阵关键词 1",true,ToolMode.Encrypt,ToolMode.Decrypt),new ToolParameter("key2","方阵关键词 2",true,ToolMode.Encrypt,ToolMode.Decrypt),LanguageParameter(),SearchHeuristic(),SearchIterations(),SearchRestarts()},delegate(ToolRequest r){if(r.Mode==ToolMode.Crack)return AdvancedCrackers.CrackTwoSquare(r);return TwoSquareCipher.Transform(r.Input,r.Get("key1"),r.Get("key2"),r.Mode==ToolMode.Decrypt);}));
             tools.Add(new DelegateCryptoTool("Nihilist",ToolCategories.Grid,new[]{ToolMode.Encrypt,ToolMode.Decrypt,ToolMode.Crack},new[]{new ToolParameter("square","方阵关键词（破解时可提供）",false),new ToolParameter("key","加法密钥",true,ToolMode.Encrypt,ToolMode.Decrypt),new ToolParameter("min","最短加法密钥长度，默认 2",false,ToolMode.Crack),new ToolParameter("max","最长加法密钥长度，默认 10",false,ToolMode.Crack),LanguageParameter()},delegate(ToolRequest r){if(r.Mode==ToolMode.Crack)return AdvancedCrackers.CrackNihilist(r);return r.Mode==ToolMode.Encrypt?NihilistCipher.Encrypt(r.Input,r.Get("square"),r.Get("key")):NihilistCipher.Decrypt(r.Input,r.Get("square"),r.Get("key"));}));
@@ -191,12 +191,12 @@ namespace ClassicalCipherToolbox.Core
             tools.Add(new DelegateCryptoTool("Fractionated Morse",ToolCategories.Grid,new[]{ToolMode.Encrypt,ToolMode.Decrypt,ToolMode.Crack},new[]{new ToolParameter("key","关键词（可选）",false,ToolMode.Encrypt,ToolMode.Decrypt),LanguageParameter(),SearchHeuristic(),SearchIterations(),SearchRestarts()},delegate(ToolRequest r){if(r.Mode==ToolMode.Crack)return AdvancedCrackers.CrackFractionatedMorse(r);return r.Mode==ToolMode.Encrypt?FractionatedMorseCipher.Encrypt(r.Input,r.Get("key")):FractionatedMorseCipher.Decrypt(r.Input,r.Get("key"));}));
             tools.Add(new DelegateCryptoTool("同音替换",ToolCategories.Substitution,new[]{ToolMode.Encrypt,ToolMode.Decrypt,ToolMode.Crack},new[]{new ToolParameter("key","随机化关键词",true,ToolMode.Encrypt,ToolMode.Decrypt),LanguageParameter(),SearchHeuristic(),SearchIterations(),SearchRestarts()},delegate(ToolRequest r){if(r.Mode==ToolMode.Crack)return AdvancedCrackers.CrackHomophonic(r);return r.Mode==ToolMode.Encrypt?HomophonicCipher.Encrypt(r.Input,r.Get("key")):HomophonicCipher.Decrypt(r.Input,r.Get("key"));}));
             tools.Add(new DelegateCryptoTool("跨行棋盘",ToolCategories.Grid,new[]{ToolMode.Encrypt,ToolMode.Decrypt,ToolMode.Crack},new[]{new ToolParameter("key","棋盘关键词（可选）",false,ToolMode.Encrypt,ToolMode.Decrypt),new ToolParameter("blanks","两个空位，例如 37",true,ToolMode.Encrypt,ToolMode.Decrypt),LanguageParameter(),SearchHeuristic(),SearchIterations()},delegate(ToolRequest r){if(r.Mode==ToolMode.Crack)return AdvancedCrackers.CrackCheckerboard(r);return r.Mode==ToolMode.Encrypt?StraddlingCheckerboardCipher.Encrypt(r.Input,r.Get("key"),r.Get("blanks")):StraddlingCheckerboardCipher.Decrypt(r.Input,r.Get("key"),r.Get("blanks"));}));
-            tools.Add(new DelegateCryptoTool("VIC",ToolCategories.Grid,new[]{ToolMode.Encrypt,ToolMode.Decrypt},new[]{new ToolParameter("common","8 个常用字母，例如 ATONESIR",true),new ToolParameter("phrase","20 字母以上记忆短语",true),new ToolParameter("date","6 位日期，例如 139195",true),new ToolParameter("personal","个人编号，例如 6",true),new ToolParameter("indicator","5 位消息组；解密可留空",false),new ToolParameter("cut","可选消息切分位置",false)},delegate(ToolRequest r){return r.Mode==ToolMode.Encrypt?VicCipher.Encrypt(r.Input,r.Get("common"),r.Get("phrase"),r.Get("date"),r.Get("personal"),r.Get("indicator"),r.Get("cut")):VicCipher.Decrypt(r.Input,r.Get("common"),r.Get("phrase"),r.Get("date"),r.Get("personal"),r.Get("indicator"),r.Get("cut"));}));
+            tools.Add(new DelegateCryptoTool("VIC",ToolCategories.Grid,new[]{ToolMode.Encrypt,ToolMode.Decrypt},new[]{new ToolParameter("common","8 个常用字母，例如 ATONESIR",true),new ToolParameter("phrase","20 字母以上记忆短语",true,ToolParameterEditor.LongTextFile,string.Empty,null),new ToolParameter("date","6 位日期，例如 139195",true),new ToolParameter("personal","个人编号，例如 6",true),new ToolParameter("indicator","5 位消息组；解密可留空",false),new ToolParameter("cut","可选消息切分位置",false)},delegate(ToolRequest r){return r.Mode==ToolMode.Encrypt?VicCipher.Encrypt(r.Input,r.Get("common"),r.Get("phrase"),r.Get("date"),r.Get("personal"),r.Get("indicator"),r.Get("cut")):VicCipher.Decrypt(r.Input,r.Get("common"),r.Get("phrase"),r.Get("date"),r.Get("personal"),r.Get("indicator"),r.Get("cut"));}));
         }
 
         private static void AddGeneral(List<ICryptoTool> tools)
         {
-            tools.Add(new DelegateCryptoTool("通用破解", ToolCategories.General, new[] { ToolMode.Crack }, new[] { LanguageParameter(), new ToolParameter("effort", "强度 快速/标准/深入", false, ToolMode.Crack), new ToolParameter("clue", "算法:名称 或 明文:片段；可留空", false, ToolMode.Crack) }, delegate(ToolRequest r) { return UniversalCracker.Crack(r); }));
+            tools.Add(new DelegateCryptoTool("通用破解", ToolCategories.General, new[] { ToolMode.Crack }, new[] { LanguageParameter(), new ToolParameter("effort", "强度", false, ToolParameterEditor.Choice, "标准", new[] { "快速", "标准", "深入" }, ToolMode.Crack), new ToolParameter("clue", "算法:名称 或 明文:片段；可留空", false, ToolMode.Crack) }, delegate(ToolRequest r) { return UniversalCracker.Crack(r); }));
             tools.Add(new DelegateCryptoTool("密码识别器", ToolCategories.General, new[] { ToolMode.Analyze }, new[] { new ToolParameter("clue", "线索或关键词（可选）", false), MatchMethodParameter() }, delegate(ToolRequest r) { return CipherIdentifier.Identify(r.Input, r.Get("clue"), r.Get("method")); }));
             tools.Add(new DelegateCryptoTool("Crib 工具", ToolCategories.General, new[] { ToolMode.Analyze }, new[] { new ToolParameter("crib", "已知明文片段", true), new ToolParameter("algorithm", "算法提示（可选）", false) }, delegate(ToolRequest r) { return CribAnalysis.Analyze(r.Input, r.Get("crib"), r.Get("algorithm")); }));
         }
@@ -231,14 +231,14 @@ namespace ClassicalCipherToolbox.Core
             AddCodec(tools, "ASCII85", TransferEncoding.Ascii85);
             AddCodec(tools, "Quoted-Printable", TransferEncoding.QuotedPrintable);
             AddCodec(tools, "Punycode", TransferEncoding.Punycode);
-            tools.Add(new DelegateCryptoTool("字符集字节", ToolCategories.Encoding, new[] { ToolMode.Encode, ToolMode.Decode }, new[] { new ToolParameter("charset", "UTF-8 / UTF-16 / GB18030 / Big5 / Shift_JIS", false) }, delegate(ToolRequest r) { return TransferEncoding.CharsetBytes(r.Input, r.Get("charset"), r.Mode == ToolMode.Decode); }));
+            tools.Add(new DelegateCryptoTool("字符集字节", ToolCategories.Encoding, new[] { ToolMode.Encode, ToolMode.Decode }, new[] { new ToolParameter("charset", "字符集", false, ToolParameterEditor.Choice, "UTF-8", new[] { "UTF-8", "UTF-16", "GB18030", "Big5", "Shift_JIS" }) }, delegate(ToolRequest r) { return TransferEncoding.CharsetBytes(r.Input, r.Get("charset"), r.Mode == ToolMode.Decode); }));
             AddCodec(tools, "盲文（英语一级）", BrailleCode.Transform);
             AddCodec(tools, "博多码 ITA2", BaudotCode.Transform);
             AddCodec(tools, "中文电报码", ChineseTelegraphCode.Transform);
             AddCodec(tools, "北约音标字母", NatoPhonetic.Transform);
             AddCodec(tools, "猪圈密码符号", SymbolCodes.Pigpen);
             AddCodec(tools, "旗语", SymbolCodes.FlagSemaphore);
-            tools.Add(new DelegateCryptoTool("条形码", ToolCategories.Encoding, new[] { ToolMode.Encode, ToolMode.Decode }, new[] { new ToolParameter("type", "CODE39 / EAN13，默认 CODE39", false) }, delegate(ToolRequest r) { return BarcodeCode.Transform(r.Input, r.Get("type"), r.Mode == ToolMode.Decode); }));
+            tools.Add(new DelegateCryptoTool("条形码", ToolCategories.Encoding, new[] { ToolMode.Encode, ToolMode.Decode }, new[] { new ToolParameter("type", "类型", false, ToolParameterEditor.Choice, "CODE39", new[] { "CODE39", "EAN13" }) }, delegate(ToolRequest r) { return BarcodeCode.Transform(r.Input, r.Get("type"), r.Mode == ToolMode.Decode); }));
             tools.Add(new DelegateCryptoTool("QR Code", ToolCategories.Encoding, new[] { ToolMode.Encode, ToolMode.Decode }, new ToolParameter[0], delegate(ToolRequest r) { return QrCodeV1.Transform(r.Input, r.Mode == ToolMode.Decode); }));
             tools.Add(new DelegateCryptoTool("颜色编码", ToolCategories.Encoding, new[] { ToolMode.Encode, ToolMode.Decode }, new ToolParameter[0], delegate(ToolRequest r) { return ColorEncoding.Text(r.Input, r.Mode == ToolMode.Decode); }));
             tools.Add(new DelegateCryptoTool("取色器与调色盘", ToolCategories.Encoding, new[] { ToolMode.Analyze }, new ToolParameter[0], delegate(ToolRequest r) { return ColorEncoding.Palette(r.Input); }));
@@ -267,8 +267,8 @@ namespace ClassicalCipherToolbox.Core
             tools.Add(new DelegateCryptoTool("Three-square",ToolCategories.Grid,new[]{ToolMode.Encrypt,ToolMode.Decrypt,ToolMode.Crack},new[]{new ToolParameter("key1","方阵关键词 1",true,ToolMode.Encrypt,ToolMode.Decrypt),new ToolParameter("key2","方阵关键词 2",true,ToolMode.Encrypt,ToolMode.Decrypt),new ToolParameter("wordlimit","候选关键词数量",false,ToolMode.Crack),LanguageParameter()},delegate(ToolRequest r){if(r.Mode==ToolMode.Crack)return ExpansionCrackers.CrackThreeSquare(r);return r.Mode==ToolMode.Encrypt?ThreeSquareCipher.Encrypt(r.Input,r.Get("key1"),r.Get("key2")):ThreeSquareCipher.Decrypt(r.Input,r.Get("key1"),r.Get("key2"));}));
             tools.Add(new DelegateCryptoTool("Digrafid",ToolCategories.Grid,new[]{ToolMode.Encrypt,ToolMode.Decrypt,ToolMode.Crack},new[]{new ToolParameter("key1","字母表关键词 1",false,ToolMode.Encrypt,ToolMode.Decrypt),new ToolParameter("key2","字母表关键词 2",false,ToolMode.Encrypt,ToolMode.Decrypt),new ToolParameter("period","周期，默认 5",false,ToolMode.Encrypt,ToolMode.Decrypt),new ToolParameter("minperiod","最短周期，默认 2",false,ToolMode.Crack),new ToolParameter("maxperiod","最长周期，默认 12",false,ToolMode.Crack),new ToolParameter("wordlimit","候选关键词数量",false,ToolMode.Crack),LanguageParameter()},delegate(ToolRequest r){if(r.Mode==ToolMode.Crack)return ExpansionCrackers.CrackDigrafid(r);return r.Mode==ToolMode.Encrypt?DigrafidCipher.Encrypt(r.Input,r.Get("key1"),r.Get("key2"),r.Get("period")):DigrafidCipher.Decrypt(r.Input,r.Get("key1"),r.Get("key2"),r.Get("period"));}));
             tools.Add(new DelegateCryptoTool("Grandpré",ToolCategories.Substitution,new[]{ToolMode.Encrypt,ToolMode.Decrypt},new[]{new ToolParameter("key","字母表关键词（可选）",false)},delegate(ToolRequest r){return r.Mode==ToolMode.Encrypt?GrandpreCipher.Encrypt(r.Input,r.Get("key")):GrandpreCipher.Decrypt(r.Input,r.Get("key"));}));
-            tools.Add(new DelegateCryptoTool("Nomenclator",ToolCategories.Substitution,new[]{ToolMode.Encrypt,ToolMode.Decrypt},new[]{new ToolParameter("map","命名码 KING=42;ARMY=731",true)},delegate(ToolRequest r){return r.Mode==ToolMode.Encrypt?NomenclatorCipher.Encrypt(r.Input,r.Get("map")):NomenclatorCipher.Decrypt(r.Input,r.Get("map"));}));
-            tools.Add(new DelegateCryptoTool("Book Cipher",ToolCategories.Substitution,new[]{ToolMode.Encrypt,ToolMode.Decrypt},new[]{new ToolParameter("book","书本密钥文本",true)},delegate(ToolRequest r){return r.Mode==ToolMode.Encrypt?BookCipher.Encrypt(r.Input,r.Get("book")):BookCipher.Decrypt(r.Input,r.Get("book"));}));
+            tools.Add(new DelegateCryptoTool("Nomenclator",ToolCategories.Substitution,new[]{ToolMode.Encrypt,ToolMode.Decrypt},new[]{new ToolParameter("map","命名码 KING=42;ARMY=731",true,ToolParameterEditor.LongTextFile,string.Empty,null)},delegate(ToolRequest r){return r.Mode==ToolMode.Encrypt?NomenclatorCipher.Encrypt(r.Input,r.Get("map")):NomenclatorCipher.Decrypt(r.Input,r.Get("map"));}));
+            tools.Add(new DelegateCryptoTool("Book Cipher",ToolCategories.Substitution,new[]{ToolMode.Encrypt,ToolMode.Decrypt},new[]{new ToolParameter("book","书本密钥文本",true,ToolParameterEditor.LongTextFile,string.Empty,null)},delegate(ToolRequest r){return r.Mode==ToolMode.Encrypt?BookCipher.Encrypt(r.Input,r.Get("book")):BookCipher.Decrypt(r.Input,r.Get("book"));}));
             tools.Add(new DelegateCryptoTool("Ubchi",ToolCategories.Transposition,new[]{ToolMode.Encrypt,ToolMode.Decrypt,ToolMode.Crack},new[]{new ToolParameter("key","换位关键词",true,ToolMode.Encrypt,ToolMode.Decrypt),new ToolParameter("nulls","加密填充字母 / 解密填充数量",false,ToolMode.Encrypt,ToolMode.Decrypt),new ToolParameter("min","最短宽度，默认 2",false,ToolMode.Crack),new ToolParameter("max","最长宽度，默认 8",false,ToolMode.Crack),new ToolParameter("nullmax","最多尝试空字母，默认 3",false,ToolMode.Crack),SearchIterations(),LanguageParameter()},delegate(ToolRequest r){if(r.Mode==ToolMode.Crack)return AdvancedCrackers.CrackUbchi(r);return r.Mode==ToolMode.Encrypt?UbchiCipher.Encrypt(r.Input,r.Get("key"),r.Get("nulls")):UbchiCipher.Decrypt(r.Input,r.Get("key"),r.Get("nulls"));}));
         }
 
@@ -288,7 +288,7 @@ namespace ClassicalCipherToolbox.Core
 
         private static void AddEnigma(List<ICryptoTool> tools)
         {
-            tools.Add(new DelegateCryptoTool("Enigma",ToolCategories.Polyalphabetic,new[]{ToolMode.Encrypt,ToolMode.Decrypt,ToolMode.Crack},new[]{new ToolParameter("model","型号 I / M3 / M4",false),new ToolParameter("rotors","转子：I II III；M4 例 Beta I II III",false),new ToolParameter("rings","环位：1 1 1",false),new ToolParameter("positions","初始位置：AAA",false,ToolMode.Encrypt,ToolMode.Decrypt),new ToolParameter("reflector","反射器 A/B/C/B-Thin/C-Thin",false),new ToolParameter("plugboard","插线板，例如 AV BS CG",false),new ToolParameter("crib","已知明文片段",true,ToolMode.Crack),new ToolParameter("rotorsearch","搜索所给转子的顺序：true/false",false,ToolMode.Crack)},delegate(ToolRequest r){if(r.Mode==ToolMode.Crack)return EnigmaCracker.Crack(r);return EnigmaCipher.Transform(r.Input,r.Get("model"),r.Get("rotors"),r.Get("rings"),r.Get("positions"),r.Get("reflector"),r.Get("plugboard"));}));
+            tools.Add(new DelegateCryptoTool("Enigma",ToolCategories.Polyalphabetic,new[]{ToolMode.Encrypt,ToolMode.Decrypt,ToolMode.Crack},new[]{new ToolParameter("model","型号",false,ToolParameterEditor.Choice,"M3",new[]{"I","M3","M4"}),new ToolParameter("rotors","转子：I II III；M4 例 Beta I II III",false),new ToolParameter("rings","环位：1 1 1",false),new ToolParameter("positions","初始位置：AAA",false,ToolMode.Encrypt,ToolMode.Decrypt),new ToolParameter("reflector","反射器",false,ToolParameterEditor.Choice,"B",new[]{"A","B","C","B-Thin","C-Thin"}),new ToolParameter("plugboard","插线板，例如 AV BS CG",false),new ToolParameter("crib","已知明文片段",true,ToolMode.Crack),new ToolParameter("rotorsearch","搜索转子顺序",false,ToolParameterEditor.Choice,"false",new[]{"false","true"},ToolMode.Crack)},delegate(ToolRequest r){if(r.Mode==ToolMode.Crack)return EnigmaCracker.Crack(r);return EnigmaCipher.Transform(r.Input,r.Get("model"),r.Get("rotors"),r.Get("rings"),r.Get("positions"),r.Get("reflector"),r.Get("plugboard"));}));
         }
 
         private static string ToRoman(int value) { return value == 1 ? "I" : value == 2 ? "II" : value == 3 ? "III" : "IV"; }
@@ -360,7 +360,8 @@ namespace ClassicalCipherToolbox.Core
 
         private static ToolParameter LanguageParameter(ToolMode mode)
         {
-            return new ToolParameter("language", "语言 AUTO/ZH/EN/FR/DE/ES/IT/PT/NL/SV/PL/TR", false, mode);
+            return new ToolParameter("language", "语言", false, ToolParameterEditor.Choice, "AUTO",
+                new[] { "AUTO", "ZH", "EN", "FR", "DE", "ES", "IT", "PT", "NL", "SV", "PL", "TR" }, mode);
         }
 
         private static ToolParameter SearchIterations()
@@ -370,7 +371,8 @@ namespace ClassicalCipherToolbox.Core
 
         private static ToolParameter SearchHeuristic()
         {
-            return new ToolParameter("heuristic", "搜索策略", false, ToolMode.Crack);
+            return new ToolParameter("heuristic", "搜索策略", false, ToolParameterEditor.Choice, "自动",
+                new[] { "自动", "模拟退火", "爬山", "延迟接受", "再加热退火" }, ToolMode.Crack);
         }
 
         private static ToolParameter SearchRestarts()
@@ -385,7 +387,8 @@ namespace ClassicalCipherToolbox.Core
 
         private static ToolParameter MatchMethodParameter(ToolMode mode)
         {
-            return new ToolParameter("method", "语言匹配 AUTO/COSINE/LLR/CHI/NGRAM", false, mode);
+            return new ToolParameter("method", "语言匹配", false, ToolParameterEditor.Choice, "AUTO",
+                new[] { "AUTO", "COSINE", "LLR", "CHI", "NGRAM" }, mode);
         }
 
         private static void SortByCommonness(List<ICryptoTool> tools)

@@ -106,6 +106,11 @@ namespace ClassicalCipherToolbox.Tests
                 if (index.Nodes.Count < 6 || details.Text.Length < 500 || details.Text.IndexOf("原理", StringComparison.Ordinal) < 0 || details.Text.IndexOf("示例", StringComparison.Ordinal) < 0) throw new Exception("Structured documentation is incomplete (groups=" + index.Nodes.Count + ", text=" + details.Text.Length + ")");
                 passed++;
             }
+            using (HelpForm contextual = new HelpForm("Book Cipher"))
+            {
+                BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic; TreeView index = (TreeView)typeof(HelpForm).GetField("index", flags).GetValue(contextual);
+                if (index.SelectedNode == null || index.SelectedNode.Text != "Book Cipher") throw new Exception("Context help did not select the current tool"); passed++;
+            }
         }
 
         private static void CheckEncodingAndMoreClassics()
@@ -260,6 +265,13 @@ namespace ClassicalCipherToolbox.Tests
             string beaufortCrack = ClassicalAnalysis.CrackBeaufort(new BeaufortCipher().Encrypt(longPlain + longPlain, "FORT"), "EN");
             if (beaufortCrack.IndexOf("FORT", StringComparison.Ordinal) < 0) throw new Exception("Beaufort cracking missed key");
             passed++;
+            string fractionatedPlain = "THEQUICKBROWNFOXJUMPSOVERTHELAZYDOGTHISISALONGENGLISHTEXTFORTESTINGCLASSICALCIPHERSEARCHANDLANGUAGESCORING";
+            string fractionatedCipher = FractionatedMorseCipher.Encrypt(fractionatedPlain, "CIPHER");
+            string fractionatedIdentification = CipherIdentifier.Identify(fractionatedCipher, string.Empty, "AUTO");
+            if (fractionatedIdentification.IndexOf("Fractionated Morse", StringComparison.Ordinal) < 0) throw new Exception("Identifier omitted Fractionated Morse family"); passed++;
+            Dictionary<string, string> universalValues = new Dictionary<string, string> { { "language", "EN" }, { "effort", "快速" } };
+            string universalFractionated = UniversalCracker.Crack(new ToolRequest(ToolMode.Crack, fractionatedCipher, universalValues));
+            if (universalFractionated.IndexOf(fractionatedPlain, StringComparison.Ordinal) < 0) throw new Exception("Universal crack discarded the Fractionated Morse answer"); passed++;
         }
 
         private static void CheckLatestFeatures()
@@ -395,6 +407,7 @@ namespace ClassicalCipherToolbox.Tests
             passed++;
             IList<string> generalTags = ToolTags.AllForCategory(tools, ToolCategories.General); if (!generalTags.Contains("常用") || !generalTags.Contains("已知明文") || generalTags.Contains("全部")) throw new Exception("Tool tags were not generated for General"); ICryptoTool cribTool = tools[crib]; if (!ToolTags.Matches(cribTool, "已知明文") || ToolTags.Matches(cribTool, "图形")) throw new Exception("Tool tag matching is incorrect"); passed++;
             bool playfairHeuristic = false; foreach (ICryptoTool tool in tools) if (tool.Name == "Playfair") foreach (ToolParameter parameter in tool.Parameters) if (parameter.Id == "heuristic") playfairHeuristic = true; if (!playfairHeuristic) throw new Exception("Search heuristic parameter missing from Playfair"); passed++;
+            bool bookLongText = false, languageChoice = false, monoAlphabet = false; foreach (ICryptoTool tool in tools) foreach (ToolParameter parameter in tool.Parameters) { if (tool.Name == "Book Cipher" && parameter.Id == "book" && parameter.Editor == ToolParameterEditor.LongTextFile) bookLongText = true; if (tool.Name == "单表替换" && parameter.Id == "key" && parameter.Editor == ToolParameterEditor.Alphabet) monoAlphabet = true; if (parameter.Id == "language" && parameter.Editor == ToolParameterEditor.Choice && parameter.DefaultValue == "AUTO") languageChoice = true; } if (!bookLongText || !languageChoice || !monoAlphabet) throw new Exception("Typed parameter editors were not registered"); passed++;
         }
 
         private static void CheckNewCrackers()
@@ -482,7 +495,7 @@ namespace ClassicalCipherToolbox.Tests
                 Dictionary<string, TextBox> parameters = (Dictionary<string, TextBox>)typeof(CipherForm).GetField("parameterBoxes", flags).GetValue(form);
                 ComboBox category = (ComboBox)typeof(CipherForm).GetField("categoryPicker", flags).GetValue(form);
                 ComboBox tags = (ComboBox)typeof(CipherForm).GetField("tagPicker", flags).GetValue(form);
-                if (form.Text != "密码箱 1.1.6" || category.Items.Contains("全部") || !category.Items.Contains(ToolCategories.Encoding)) throw new Exception("Product version or concrete categories not applied");
+                if (form.Text != "密码箱 1.1.8" || category.Items.Contains("全部") || !category.Items.Contains(ToolCategories.Encoding)) throw new Exception("Product version or concrete categories not applied");
                 if (!tags.Items.Contains("常用") || !tags.Items.Contains("可破解") || tags.Items.Contains("全部")) throw new Exception("Tag picker was not populated");
                 passed++;
                 tags.SelectedItem = "可破解"; ComboBox taggedTools = (ComboBox)typeof(CipherForm).GetField("toolPicker", flags).GetValue(form); foreach (object item in taggedTools.Items) if (!((ICryptoTool)item).Modes.Contains(ToolMode.Crack)) throw new Exception("Tag picker retained a non-crackable tool"); tags.SelectedItem = ToolTags.Any; passed++;
@@ -509,13 +522,15 @@ namespace ClassicalCipherToolbox.Tests
                 for (int i = 0; i < tools.Items.Count; i++) if (((ICryptoTool)tools.Items[i]).Name == "单表替换") { tools.SelectedIndex = i; break; }
                 typeof(CipherForm).GetMethod("SetMode", flags).Invoke(form, new object[] { ToolMode.Crack });
                 Dictionary<string, ComboBox> parameterPickers = (Dictionary<string, ComboBox>)typeof(CipherForm).GetField("parameterPickers", flags).GetValue(form); if (!parameterPickers.ContainsKey("method") || parameterPickers["method"].Items.Count != 5 || parameterPickers["method"].Text != "AUTO") throw new Exception("Monoalphabetic language metric is not a selectable list"); passed++;
+                typeof(CipherForm).GetMethod("SetMode", flags).Invoke(form, new object[] { ToolMode.Encrypt }); Application.DoEvents(); FlowLayoutPanel monoParameters = (FlowLayoutPanel)typeof(CipherForm).GetField("parameterPanel", flags).GetValue(form); bool alphabetButton = false; foreach (Control card in monoParameters.Controls) foreach (Control host in card.Controls) foreach (Control child in host.Controls) if (child is Button && child.Text == "…") alphabetButton = true; if (!parameters.ContainsKey("key") || parameters["key"].Width < 300 || !alphabetButton) throw new Exception("Monoalphabetic alphabet editor is too small or unreachable"); passed++;
+                Type alphabetDialogType = typeof(CipherForm).GetNestedType("AlphabetParameterDialog", flags); ConstructorInfo alphabetConstructor = alphabetDialogType.GetConstructor(flags, null, new[] { typeof(string) }, null); Form alphabetDialog = (Form)alphabetConstructor.Invoke(new object[] { "ABCDEFGHIJKLMNOPQRSTUVWXYZ" }); TextBox quickAlphabet = (TextBox)alphabetDialogType.GetField("quick", flags).GetValue(alphabetDialog); quickAlphabet.Text = "ZYXWVUTSRQPONMLKJIHGFEDCBA"; alphabetDialogType.GetMethod("AcceptAlphabet", flags).Invoke(alphabetDialog, null); string editedAlphabet = (string)alphabetDialogType.GetProperty("Value", flags).GetValue(alphabetDialog, null); alphabetDialog.Dispose(); if (editedAlphabet != "ZYXWVUTSRQPONMLKJIHGFEDCBA") throw new Exception("Quick alphabet input was not applied"); passed++;
                 category.SelectedItem = ToolCategories.Polyalphabetic;
                 for (int i = 0; i < tools.Items.Count; i++) if (((ICryptoTool)tools.Items[i]).Name == "维吉尼亚") { tools.SelectedIndex = i; break; }
                 typeof(CipherForm).GetMethod("SetMode", flags).Invoke(form, new object[] { ToolMode.Crack });
                 Application.DoEvents();
                 TableLayoutPanel rootLayout = (TableLayoutPanel)typeof(CipherForm).GetField("rootLayout", flags).GetValue(form);
                 ToolTip tips = (ToolTip)typeof(CipherForm).GetField("tips", flags).GetValue(form);
-                if (rootLayout.RowStyles[1].Height <= 52 || parameters["language"].Width <= 180 || string.IsNullOrEmpty(tips.GetToolTip(parameters["language"]))) throw new Exception("Parameter hints are still clipped without an accessible full label");
+                if (rootLayout.RowStyles[1].Height <= 52 || parameterPickers["language"].Width <= 180 || string.IsNullOrEmpty(tips.GetToolTip(parameterPickers["language"]))) throw new Exception("Parameter hints are still clipped without an accessible full label");
                 passed++;
                 if (tools.DropDownWidth < tools.Width) throw new Exception("Tool dropdown is narrower than its display field");
                 passed++;
@@ -550,6 +565,9 @@ namespace ClassicalCipherToolbox.Tests
                 }
                 if (output.Text.IndexOf("batch-a.txt", StringComparison.Ordinal) < 0 || output.Text.IndexOf("DEF", StringComparison.Ordinal) < 0) throw new Exception("Batch files were not processed independently");
                 passed++;
+                for (int i = 0; i < tools.Items.Count; i++) if (((ICryptoTool)tools.Items[i]).Name == "Book Cipher") { tools.SelectedIndex = i; break; }
+                Application.DoEvents(); FlowLayoutPanel parameterPanel = (FlowLayoutPanel)typeof(CipherForm).GetField("parameterPanel", flags).GetValue(form); bool longEditorButton = false; foreach (Control card in parameterPanel.Controls) foreach (Control host in card.Controls) foreach (Control child in host.Controls) if (child is Button && child.Text == "…") longEditorButton = true;
+                if (!parameters.ContainsKey("book") || !parameters["book"].ReadOnly || !longEditorButton) throw new Exception("Book Cipher long-text file editor is not reachable"); passed++;
                 ((System.Windows.Forms.Timer)typeof(CipherForm).GetField("liveTimer", flags).GetValue(form)).Dispose();
             }
             finally

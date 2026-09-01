@@ -57,6 +57,10 @@ namespace ClassicalCipherToolbox.Analysis
                         "整体 IC {0:0.0000}；周期 {1} 的平均分列 IC {2:0.0000}；Kasiski {3}；语言 {4}；候选密钥 {5}",
                         ic, periodic.Period, periodic.AverageIc, periodic.KasiskiVotes, periodic.Language, periodic.Key));
 
+                if (compactLetters && letters.Length >= 60 && ic < 0.055)
+                    AddGuess(guesses, "Fractionated Morse / 分数化密码", periodic == null ? 66 : 60,
+                        string.Format(CultureInfo.InvariantCulture, "纯字母连续文本，IC {0:0.0000}；与周期多表结果一并验证", ic));
+
                 TransformProbe transposition = letters.Length >= 40 && ic >= 0.052 ? ProbeSimpleTranspositions(source, sourceLanguageScore, matchMethod) : null;
                 if (transposition != null)
                     AddGuess(guesses, transposition.Name, ConfidenceFromGain(transposition.Gain, 76), "实际试解最符合 " + transposition.Language + "，参数 " + transposition.Key);

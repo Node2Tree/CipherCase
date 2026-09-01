@@ -48,11 +48,13 @@ namespace ClassicalCipherToolbox
         private ICryptoTool currentTool;
         private ToolMode activeMode;
         private bool loadingBatch;
+        private bool workRunning;
+        private bool rerunPending;
         private int executionVersion;
 
         internal CipherForm()
         {
-            Text = "密码箱 1.1.6";
+            Text = "密码箱 1.1.8";
             StartPosition = FormStartPosition.CenterScreen;
             MinimumSize = new Size(800, 600);
             ClientSize = new Size(960, 700);
@@ -282,18 +284,36 @@ namespace ClassicalCipherToolbox
             foreach (ToolParameter parameter in currentTool.Parameters)
             {
                 if (!parameter.AppliesTo(activeMode)) continue;
-                int measured = TextRenderer.MeasureText(parameter.Hint, Font).Width + 26;
-                int cardWidth = Math.Max(190, Math.Min(520, measured));
-                Control box;
+                int measured = TextRenderer.MeasureText(parameter.Hint, Font).Width + 34;
+                int cardWidth = Math.Max(240, Math.Min(640, measured));
+                if (parameter.Editor == ToolParameterEditor.LongTextFile) cardWidth = Math.Max(cardWidth, 420);
+                if (parameter.Editor == ToolParameterEditor.Alphabet || parameter.Id == "key1" || parameter.Id == "key2" || parameter.Id == "alphabet" || parameter.Id == "locks" || parameter.Id == "partial" || parameter.Id == "plugboard" || parameter.Id == "rotors") cardWidth = Math.Max(cardWidth, 340);
+                Control box, editor;
                 if (parameter.Id == "crib" || parameter.Id == "clue") cardWidth = Math.Max(cardWidth, 300);
-                if (parameter.Id == "method") { ComboBox picker = CreatePicker(cardWidth); picker.Items.AddRange(new object[] { "AUTO", "COSINE", "LLR", "CHI", "NGRAM" }); picker.SelectedIndex = 0; picker.SelectedIndexChanged += delegate { ScheduleLiveUpdate(); }; parameterPickers[parameter.Id] = picker; box = picker; }
-                else if (parameter.Id == "effort") { ComboBox picker = CreatePicker(cardWidth); picker.Items.AddRange(new object[] { "快速", "标准", "深入" }); picker.SelectedIndex = 1; picker.SelectedIndexChanged += delegate { ScheduleLiveUpdate(); }; parameterPickers[parameter.Id] = picker; box = picker; }
-                else if (parameter.Id == "heuristic") { ComboBox picker = CreatePicker(cardWidth); picker.Items.AddRange(new object[] { "自动", "模拟退火", "爬山", "延迟接受", "再加热退火" }); picker.SelectedIndex = 0; picker.SelectedIndexChanged += delegate { ScheduleLiveUpdate(); }; parameterPickers[parameter.Id] = picker; box = picker; }
-                else { TextBox textBox = CreateSingleLineBox(cardWidth); textBox.TextChanged += delegate { ScheduleLiveUpdate(); }; parameterBoxes[parameter.Id] = textBox; box = textBox; }
+                if (parameter.Editor == ToolParameterEditor.Choice)
+                {
+                    ComboBox picker = CreatePicker(cardWidth); picker.Items.AddRange(parameter.Choices); if (picker.Items.Count > 0) picker.SelectedIndex = 0;
+                    if (!string.IsNullOrEmpty(parameter.DefaultValue) && picker.Items.Contains(parameter.DefaultValue)) picker.SelectedItem = parameter.DefaultValue;
+                    picker.SelectedIndexChanged += delegate { ScheduleLiveUpdate(); }; parameterPickers[parameter.Id] = picker; box = picker; editor = picker;
+                }
+                else
+                {
+                    TextBox textBox = CreateSingleLineBox(cardWidth); textBox.TextChanged += delegate { ScheduleLiveUpdate(); }; parameterBoxes[parameter.Id] = textBox; box = textBox; editor = textBox;
+                    if (!string.IsNullOrEmpty(parameter.DefaultValue)) textBox.Text = parameter.DefaultValue;
+                    if (parameter.Editor == ToolParameterEditor.LongTextFile || parameter.Editor == ToolParameterEditor.Alphabet)
+                    {
+                        string parameterId = parameter.Id, parameterHint = parameter.Hint; bool alphabetEditor = parameter.Editor == ToolParameterEditor.Alphabet; textBox.ReadOnly = !alphabetEditor; textBox.Cursor = Cursors.Hand;
+                        Panel host = new Panel { Height = 25, BackColor = Background }; textBox.Dock = DockStyle.Fill;
+                        Button edit = CreateButton("…", 34, false); edit.Dock = DockStyle.Right; edit.Height = 25; edit.Margin = Padding.Empty;
+                        EventHandler openEditor = delegate { if (alphabetEditor) ShowAlphabetEditor(textBox); else ShowLongTextEditor(parameterId, parameterHint, textBox); };
+                        edit.Click += openEditor; textBox.DoubleClick += openEditor; host.Controls.Add(textBox); host.Controls.Add(edit); editor = host;
+                        tips.SetToolTip(edit, alphabetEditor ? "逐个填写字母表" : "编辑或打开文件"); NativeMethods.SetCueBanner(textBox, alphabetEditor ? "粘贴 26 字母或点击 …" : "双击编辑或打开文件");
+                    }
+                }
                 box.Margin = Padding.Empty;
                 string storageKey = ParameterStorageKey(currentTool, parameter.Id);
                 if (parameterValues.ContainsKey(storageKey)) { ComboBox picker = box as ComboBox; if (picker != null && picker.Items.Contains(parameterValues[storageKey])) picker.SelectedItem = parameterValues[storageKey]; else box.Text = parameterValues[storageKey]; }
-                Panel card = CreateParameterCard(parameter.Hint, box, cardWidth);
+                Panel card = CreateParameterCard(parameter.Hint + (parameter.Required ? " *" : string.Empty), editor, cardWidth);
                 parameterPanel.Controls.Add(card);
                 tips.SetToolTip(box, parameter.Hint);
                 tips.SetToolTip(card, parameter.Hint);
@@ -307,11 +327,22 @@ namespace ClassicalCipherToolbox
             foreach (KeyValuePair<string, TextBox> item in parameterBoxes) parameterValues[ParameterStorageKey(currentTool, item.Key)] = item.Value.Text;
             foreach (KeyValuePair<string, ComboBox> item in parameterPickers) parameterValues[ParameterStorageKey(currentTool, item.Key)] = item.Value.Text;
         }
+        private void ShowLongTextEditor(string parameterId, string hint, TextBox target)
+        {
+            using (LongTextParameterDialog dialog = new LongTextParameterDialog(currentTool == null ? hint : currentTool.Name + " · " + hint, target.Text))
+                if (dialog.ShowDialog(this) == DialogResult.OK) { target.Text = dialog.Value; parameterValues[ParameterStorageKey(currentTool, parameterId)] = target.Text; }
+        }
+        private void ShowAlphabetEditor(TextBox target)
+        {
+            using (AlphabetParameterDialog dialog = new AlphabetParameterDialog(target.Text))
+                if (dialog.ShowDialog(this) == DialogResult.OK) target.Text = dialog.Value;
+        }
         private static string ParameterStorageKey(ICryptoTool tool, string id) { return tool.Name + "|" + id; }
         private void BeginExecution()
         {
             if (currentTool == null) return;
             if (inputBox.TextLength == 0) { outputBox.Clear(); SetWorkProgress(false, 0, string.Empty); SetStatus(string.Empty, false); return; }
+            if (workRunning) { rerunPending = true; SetStatus("正在停止旧任务…", false); return; }
             Dictionary<string, string> values = new Dictionary<string, string>();
             foreach (KeyValuePair<string, TextBox> item in parameterBoxes) values[item.Key] = item.Value.Text;
             foreach (KeyValuePair<string, ComboBox> item in parameterPickers) values[item.Key] = item.Value.Text;
@@ -321,6 +352,7 @@ namespace ClassicalCipherToolbox
             TextRuleOptions rules = textRules.Copy();
             List<BatchDocument> documents = new List<BatchDocument>(batchDocuments);
             int version = ++executionVersion;
+            workRunning = true; rerunPending = false;
             SetWorkProgress(mode == ToolMode.Crack && SupportsProgress(tool.Name), 0, string.Empty);
             SetStatus(mode == ToolMode.Crack ? "破解中…" : mode == ToolMode.Analyze ? "分析中…" : "处理中…", false);
             Action<int, string> progress = delegate(int percent, string stage)
@@ -357,18 +389,23 @@ namespace ClassicalCipherToolbox
                 if (IsDisposed || !IsHandleCreated) return;
                 BeginInvoke((MethodInvoker)delegate
                 {
-                    if (version != executionVersion || IsDisposed) return;
+                    if (IsDisposed) return;
+                    bool stale = version != executionVersion; workRunning = false;
                     ExecutionResult result = task.Result;
-                    SetWorkProgress(false, 0, string.Empty);
-                    outputBox.Text = result.Output;
-                    UpdateColorPalette(result.Output);
-                    UpdateCandidatePanel(result.Output, mode);
-                    if (result.Error == null)
+                    if (!stale)
                     {
-                        SaveParameters();
-                        SetStatus(documents.Count > 0 ? "实时 · " + documents.Count + " 个文件" : "实时", false);
+                        SetWorkProgress(false, 0, string.Empty);
+                        outputBox.Text = result.Output;
+                        UpdateColorPalette(result.Output);
+                        UpdateCandidatePanel(result.Output, mode);
+                        if (result.Error == null)
+                        {
+                            SaveParameters();
+                            SetStatus(documents.Count > 0 ? "实时 · " + documents.Count + " 个文件" : "实时", false);
+                        }
+                        else SetStatus(result.Error, true);
                     }
-                    else SetStatus(result.Error, true);
+                    if (rerunPending) { rerunPending = false; ScheduleLiveUpdate(); }
                 });
             });
         }
@@ -377,9 +414,11 @@ namespace ClassicalCipherToolbox
             if (liveTimer == null || outputBox == null) return;
             liveTimer.Stop();
             executionVersion++;
-            if (inputBox == null || inputBox.TextLength == 0) { outputBox.Clear(); SetStatus(string.Empty, false); return; }
-            if (currentTool != null && currentTool.Name == "通用破解") { string effort = parameterPickers.ContainsKey("effort") ? parameterPickers["effort"].Text : "标准"; liveTimer.Interval = effort == "快速" ? 450 : effort == "深入" ? 1200 : 800; }
-            else liveTimer.Interval = activeMode == ToolMode.Crack || activeMode == ToolMode.Analyze ? 350 : 180;
+            if (inputBox == null || inputBox.TextLength == 0) { rerunPending = false; outputBox.Clear(); SetStatus(string.Empty, false); return; }
+            if (workRunning) { rerunPending = true; SetStatus("正在停止旧任务…", false); return; }
+            if (currentTool != null && currentTool.Name == "通用破解") { string effort = parameterPickers.ContainsKey("effort") ? parameterPickers["effort"].Text : "标准"; liveTimer.Interval = effort == "快速" ? 600 : effort == "深入" ? 1400 : 900; }
+            else if (activeMode == ToolMode.Crack && currentTool != null && SupportsProgress(currentTool.Name)) liveTimer.Interval = 700;
+            else liveTimer.Interval = activeMode == ToolMode.Crack || activeMode == ToolMode.Analyze ? 400 : 180;
             liveTimer.Start();
         }
         private void SwapText()
@@ -393,7 +432,7 @@ namespace ClassicalCipherToolbox
             else if (activeMode == ToolMode.Decode && currentTool.Modes.Contains(ToolMode.Encode)) SetMode(ToolMode.Encode);
             inputBox.Focus();
         }
-        private void ClearText() { liveTimer.Stop(); executionVersion++; SetWorkProgress(false, 0, string.Empty); batchDocuments.Clear(); inputBox.Clear(); outputBox.Clear(); candidateGrid.Rows.Clear(); candidateGrid.Visible = false; colorPalettePanel.Controls.Clear(); colorPalettePanel.Visible = false; SetStatus(string.Empty, false); inputBox.Focus(); }
+        private void ClearText() { liveTimer.Stop(); executionVersion++; rerunPending = false; SetWorkProgress(false, 0, string.Empty); batchDocuments.Clear(); inputBox.Clear(); outputBox.Clear(); candidateGrid.Rows.Clear(); candidateGrid.Visible = false; colorPalettePanel.Controls.Clear(); colorPalettePanel.Visible = false; SetStatus(string.Empty, false); inputBox.Focus(); }
         private void PickColor()
         {
             using (ColorDialog dialog = new ColorDialog { FullOpen = true, AnyColor = true }) if (dialog.ShowDialog(this) == DialogResult.OK) inputBox.Text = "#" + dialog.Color.R.ToString("X2") + dialog.Color.G.ToString("X2") + dialog.Color.B.ToString("X2");
@@ -555,13 +594,13 @@ namespace ClassicalCipherToolbox
         }
         private static string Between(string text, string start, string end) { int a = text.IndexOf(start, StringComparison.Ordinal); if (a < 0) return string.Empty; a += start.Length; int b = text.IndexOf(end, a, StringComparison.Ordinal); return (b < 0 ? text.Substring(a) : text.Substring(a, b - a)).Trim(); }
         private static string Field(string header, string label) { int start = header.IndexOf(label, StringComparison.Ordinal); if (start < 0) return string.Empty; start += label.Length; int end = header.IndexOf("  ", start, StringComparison.Ordinal); return (end < 0 ? header.Substring(start) : header.Substring(start, end - start)).Trim(); }
-        private void ShowHelp() { using (HelpForm help = new HelpForm()) help.ShowDialog(this); }
+        private void ShowHelp() { using (HelpForm help = new HelpForm(currentTool == null ? null : currentTool.Name)) help.ShowDialog(this); }
         private void SetStatus(string text, bool isError) { statusLabel.Text = text; statusLabel.ForeColor = isError ? Error : Muted; tips.SetToolTip(statusLabel, text); }
         private void SetWorkProgress(bool visible, int percent, string stage)
         {
             Control panel = workProgress.Parent; panel.Visible = visible; if (!visible) return; workProgress.Value = Math.Max(0, Math.Min(100, percent)); if (!string.IsNullOrEmpty(stage)) SetStatus(stage + "  " + percent + "%", false);
         }
-        private void CancelCurrentWork() { liveTimer.Stop(); executionVersion++; SetWorkProgress(false, 0, string.Empty); SetStatus("已取消", false); }
+        private void CancelCurrentWork() { liveTimer.Stop(); executionVersion++; rerunPending = false; SetWorkProgress(false, 0, string.Empty); SetStatus("已取消", false); }
         private static bool SupportsProgress(string name)
         {
             switch (name)
@@ -629,6 +668,123 @@ namespace ClassicalCipherToolbox
             internal ExecutionResult(string output, string error) { Output = output; Error = error; }
             internal string Output { get; private set; }
             internal string Error { get; private set; }
+        }
+        private sealed class AlphabetParameterDialog : Form
+        {
+            private readonly TextBox quick;
+            private readonly TextBox[] letters;
+            private bool synchronizing;
+            private bool quickDirty;
+            private string value;
+
+            internal AlphabetParameterDialog(string current)
+            {
+                Text = "单表替换 · 字母表"; StartPosition = FormStartPosition.CenterParent; FormBorderStyle = FormBorderStyle.Sizable; MaximizeBox = true; MinimizeBox = false; ShowInTaskbar = false;
+                MinimumSize = new Size(720, 330); ClientSize = new Size(860, 390); BackColor = Background; Font = new Font("Microsoft YaHei UI", 9F); AutoScaleMode = AutoScaleMode.Dpi;
+                TableLayoutPanel root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(18), ColumnCount = 1, RowCount = 5, BackColor = Background };
+                root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F)); root.RowStyles.Add(new RowStyle(SizeType.Absolute, 28F)); root.RowStyles.Add(new RowStyle(SizeType.Absolute, 38F)); root.RowStyles.Add(new RowStyle(SizeType.Absolute, 36F)); root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F)); root.RowStyles.Add(new RowStyle(SizeType.Absolute, 50F)); Controls.Add(root);
+                root.Controls.Add(new Label { Text = "整段输入（A 对应第 1 位，Z 对应第 26 位）", Dock = DockStyle.Fill, TextAlign = ContentAlignment.BottomLeft, ForeColor = Muted }, 0, 0);
+                Panel quickHost = new Panel { Dock = DockStyle.Fill, BackColor = Background };
+                quick = CreateSingleLineBox(600); quick.Dock = DockStyle.Fill; quick.MaxLength = 26; quick.CharacterCasing = CharacterCasing.Upper; quick.TextChanged += delegate { if (!synchronizing) quickDirty = true; };
+                Button apply = CreateButton("填入", 64, false); apply.Dock = DockStyle.Right; apply.Height = 25; apply.Click += delegate { ApplyQuick(); };
+                quickHost.Controls.Add(quick); quickHost.Controls.Add(apply); root.Controls.Add(quickHost, 0, 1);
+                root.Controls.Add(new Label { Text = "逐个填写", Dock = DockStyle.Fill, TextAlign = ContentAlignment.BottomLeft, ForeColor = Muted }, 0, 2);
+                TableLayoutPanel grid = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 13, RowCount = 4, BackColor = Background, Padding = new Padding(0, 4, 0, 0) };
+                for (int column = 0; column < 13; column++) grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F / 13F));
+                for (int row = 0; row < 4; row++) grid.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
+                letters = new TextBox[26];
+                for (int i = 0; i < 26; i++)
+                {
+                    int row = i < 13 ? 0 : 2, column = i % 13; Label label = new Label { Text = ((char)('A' + i)).ToString(), Dock = DockStyle.Fill, TextAlign = ContentAlignment.BottomCenter, ForeColor = Muted };
+                    TextBox box = CreateSingleLineBox(40); box.Dock = DockStyle.Fill; box.Margin = new Padding(3); box.MaxLength = 1; box.CharacterCasing = CharacterCasing.Upper; box.TextAlign = HorizontalAlignment.Center; box.Tag = i; box.TextChanged += LetterChanged;
+                    letters[i] = box; grid.Controls.Add(label, column, row); grid.Controls.Add(box, column, row + 1);
+                }
+                root.Controls.Add(grid, 0, 3);
+                FlowLayoutPanel actions = CreateBar(FlowDirection.RightToLeft, 8); actions.Padding = new Padding(0, 8, 0, 0);
+                Button ok = CreateButton("确定", 72, true); ok.Click += delegate { AcceptAlphabet(); }; actions.Controls.Add(ok);
+                Button cancel = CreateButton("取消", 72, false); cancel.DialogResult = DialogResult.Cancel; cancel.Margin = new Padding(6, 0, 0, 0); actions.Controls.Add(cancel); root.Controls.Add(actions, 0, 4);
+                CancelButton = cancel; quick.Text = (current ?? string.Empty).Trim().ToUpperInvariant(); string initialError; if (ValidateAlphabet(quick.Text, out initialError)) ApplyQuick();
+                Shown += delegate { quick.Focus(); quick.SelectAll(); };
+            }
+
+            internal string Value { get { return value ?? string.Empty; } }
+
+            private void ApplyQuick()
+            {
+                string candidate = quick.Text.Trim().ToUpperInvariant(); string error; if (!ValidateAlphabet(candidate, out error)) { MessageBox.Show(this, error, "密码箱", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
+                synchronizing = true; for (int i = 0; i < 26; i++) letters[i].Text = candidate[i].ToString(); synchronizing = false; quickDirty = false;
+            }
+            private void LetterChanged(object sender, EventArgs eventArgs)
+            {
+                if (synchronizing) return; TextBox box = sender as TextBox; if (box == null) return; string candidate = GridAlphabet(); if (candidate.Length == 26) { synchronizing = true; quick.Text = candidate; synchronizing = false; quickDirty = false; }
+                int index = (int)box.Tag; if (box.TextLength == 1 && index < 25) letters[index + 1].Focus();
+            }
+            private string GridAlphabet()
+            {
+                StringBuilder result = new StringBuilder(26); foreach (TextBox box in letters) { if (box.TextLength != 1) return string.Empty; result.Append(char.ToUpperInvariant(box.Text[0])); } return result.ToString();
+            }
+            private void AcceptAlphabet()
+            {
+                string candidate = quickDirty ? quick.Text.Trim().ToUpperInvariant() : GridAlphabet(); if (candidate.Length != 26) candidate = quick.Text.Trim().ToUpperInvariant(); string error; if (!ValidateAlphabet(candidate, out error)) { MessageBox.Show(this, error, "密码箱", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
+                value = candidate; DialogResult = DialogResult.OK;
+            }
+            private static bool ValidateAlphabet(string candidate, out string error)
+            {
+                if (candidate.Length != 26) { error = "请输入 26 个字母。"; return false; } HashSet<char> used = new HashSet<char>(); foreach (char c in candidate) if (c < 'A' || c > 'Z' || !used.Add(c)) { error = "字母表须由 A–Z 的 26 个不重复字母组成。"; return false; } error = string.Empty; return true;
+            }
+        }
+        private sealed class LongTextParameterDialog : Form
+        {
+            private readonly TextBox editor;
+            private readonly ComboBox encodingPicker;
+            private readonly Label stats;
+            private string loadedFile;
+
+            internal LongTextParameterDialog(string title, string current)
+            {
+                Text = title; StartPosition = FormStartPosition.CenterParent; FormBorderStyle = FormBorderStyle.Sizable; MaximizeBox = true; MinimizeBox = false; ShowInTaskbar = false;
+                MinimumSize = new Size(560, 360); ClientSize = new Size(760, 520); BackColor = Background; Font = new Font("Microsoft YaHei UI", 9F); AutoScaleMode = AutoScaleMode.Dpi; AllowDrop = true;
+                TableLayoutPanel layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(18), ColumnCount = 1, RowCount = 3, BackColor = Background };
+                layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F)); layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F)); layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F)); layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 50F)); Controls.Add(layout);
+                stats = new Label { Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, ForeColor = Muted, AutoEllipsis = true };
+                editor = CreateTextArea(false); editor.Font = new Font("Consolas", 11F); editor.Text = current ?? string.Empty; editor.TextChanged += delegate { UpdateStats(); };
+                FlowLayoutPanel actions = CreateBar(FlowDirection.RightToLeft, 8); actions.Padding = new Padding(0, 8, 0, 0);
+                Button ok = CreateButton("确定", 72, true); ok.DialogResult = DialogResult.OK; actions.Controls.Add(ok);
+                Button cancel = CreateButton("取消", 72, false); cancel.DialogResult = DialogResult.Cancel; cancel.Margin = new Padding(6, 0, 0, 0); actions.Controls.Add(cancel);
+                Button clear = CreateButton("清空", 64, false); clear.Margin = new Padding(6, 0, 0, 0); clear.Click += delegate { loadedFile = string.Empty; editor.Clear(); }; actions.Controls.Add(clear);
+                Button paste = CreateButton("粘贴", 64, false); paste.Margin = new Padding(6, 0, 0, 0); paste.Click += delegate { try { if (Clipboard.ContainsText()) editor.SelectedText = Clipboard.GetText(); } catch (ExternalException) { } }; actions.Controls.Add(paste);
+                encodingPicker = CreatePicker(100); encodingPicker.Items.AddRange(new object[] { "自动", "UTF-8", "UTF-16", "GB18030", "Big5", "Shift_JIS" }); encodingPicker.SelectedIndex = 0; encodingPicker.Margin = new Padding(6, 0, 0, 0); actions.Controls.Add(encodingPicker);
+                Button open = CreateButton("打开", 64, false); open.Margin = new Padding(6, 0, 0, 0); open.Click += delegate { OpenTextFile(); }; actions.Controls.Add(open);
+                layout.Controls.Add(stats, 0, 0); layout.Controls.Add(editor, 0, 1); layout.Controls.Add(actions, 0, 2);
+                DragEnter += FileDragEnter; DragDrop += FileDragDrop; AcceptButton = ok; CancelButton = cancel;
+                Shown += delegate { editor.Focus(); editor.SelectionStart = editor.TextLength; UpdateStats(); };
+            }
+
+            internal string Value { get { return editor.Text; } }
+
+            private void OpenTextFile()
+            {
+                using (OpenFileDialog dialog = new OpenFileDialog { Filter = "文本文件|*.txt;*.log;*.csv;*.md;*.json;*.xml|所有文件|*.*" })
+                    if (dialog.ShowDialog(this) == DialogResult.OK) LoadTextFile(dialog.FileName);
+            }
+            private void LoadTextFile(string path)
+            {
+                try { editor.Text = ReadTextFile(path, encodingPicker.Text); loadedFile = Path.GetFileName(path); UpdateStats(); }
+                catch (Exception exception) { MessageBox.Show(this, "读取失败：" + exception.Message, "密码箱", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            }
+            private static string ReadTextFile(string path, string encodingName)
+            {
+                string name = string.IsNullOrEmpty(encodingName) ? "自动" : encodingName;
+                if (name == "自动") using (StreamReader reader = new StreamReader(path, Encoding.UTF8, true)) return reader.ReadToEnd();
+                Encoding encoding = name == "UTF-8" ? new UTF8Encoding(false, true) : name == "UTF-16" ? Encoding.Unicode : Encoding.GetEncoding(name);
+                return File.ReadAllText(path, encoding);
+            }
+            private void FileDragEnter(object sender, DragEventArgs eventArgs) { if (eventArgs.Data.GetDataPresent(DataFormats.FileDrop)) eventArgs.Effect = DragDropEffects.Copy; }
+            private void FileDragDrop(object sender, DragEventArgs eventArgs) { string[] files = eventArgs.Data.GetData(DataFormats.FileDrop) as string[]; if (files != null && files.Length > 0) LoadTextFile(files[0]); }
+            private void UpdateStats()
+            {
+                int lines = editor.TextLength == 0 ? 0 : editor.Lines.Length; string prefix = string.IsNullOrEmpty(loadedFile) ? string.Empty : loadedFile + " · "; stats.Text = prefix + editor.TextLength + " 字符 · " + lines + " 行";
+            }
         }
         private sealed class KnownPlaintextDialog : Form
         {
