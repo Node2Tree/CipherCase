@@ -130,6 +130,16 @@ namespace ClassicalCipherToolbox.Tests
             Check("Baudot ITA2 round trip", "HELLO 123", BaudotCode.Transform(BaudotCode.Transform("HELLO 123", false), true));
             Check("Chinese telegraph known values", "一丁七", ChineseTelegraphCode.Transform("0001 0002 0003", true));
             Check("Chinese telegraph round trip", "中国人", ChineseTelegraphCode.Transform(ChineseTelegraphCode.Transform("中国人", false), true));
+            Check("Chinese input pinyin", "zhong guo", ChineseInputCode.Transform("中国", "汉语拼音", false));
+            Check("Chinese input numbered pinyin", "zhong1 guo2", ChineseInputCode.Transform("中国", "汉语拼音（数字声调）", false));
+            Check("Chinese input initials", "z g", ChineseInputCode.Transform("中国", "拼音首字母", false));
+            Check("Chinese input bopomofo", "ㄓㄨㄥ ㄍㄨㄛˊ", ChineseInputCode.Transform("中国", "注音", false));
+            Check("Chinese input cangjie", "L WMGI", ChineseInputCode.Transform("中国", "仓颉", false));
+            Check("Chinese input quick", "L WI", ChineseInputCode.Transform("中国", "速成", false));
+            Check("Chinese input Cantonese", "zung1 gwok3", ChineseInputCode.Transform("中国", "粤拼", false));
+            Check("Chinese input four corner", "5000.6 6010.3", ChineseInputCode.Transform("中国", "四角号码", false));
+            Check("Chinese input strokes", "4 8", ChineseInputCode.Transform("中国", "总笔画", false));
+            string inputReverse = ChineseInputCode.Transform("zhong guo", "汉语拼音", true); if (inputReverse.IndexOf('中') < 0 || inputReverse.IndexOf('国') < 0) throw new Exception("Chinese input reverse lookup missed common characters"); passed++;
             string qr = QrCodeV1.Transform("HELLO QR", false); Check("QR version one round trip", "HELLO QR", QrCodeV1.Transform(qr, true));
             string code39 = BarcodeCode.Transform("CODE39", "CODE39", false); Check("Code39 round trip", "CODE39", BarcodeCode.Transform(code39, "CODE39", true));
             string ean = BarcodeCode.Transform("690123456789", "EAN13", false); Check("EAN13 round trip", "6901234567892", BarcodeCode.Transform(ean, "EAN13", true));
@@ -391,7 +401,7 @@ namespace ClassicalCipherToolbox.Tests
         private static void CheckToolRegistry()
         {
             IList<ICryptoTool> tools = ToolRegistry.CreateAll();
-            if (tools.Count != 107) throw new Exception("Tool registry: expected 107 tools but got " + tools.Count);
+            if (tools.Count != 108) throw new Exception("Tool registry: expected 108 tools but got " + tools.Count);
             bool foundCrack = false;
             bool foundAnalyze = false;
             int crackable = 0;
@@ -501,7 +511,7 @@ namespace ClassicalCipherToolbox.Tests
                 Dictionary<string, TextBox> parameters = (Dictionary<string, TextBox>)typeof(CipherForm).GetField("parameterBoxes", flags).GetValue(form);
                 ComboBox category = (ComboBox)typeof(CipherForm).GetField("categoryPicker", flags).GetValue(form);
                 ComboBox tags = (ComboBox)typeof(CipherForm).GetField("tagPicker", flags).GetValue(form);
-                if (form.Text != "密码箱 1.2.1" || category.Items.Contains("全部") || !category.Items.Contains(ToolCategories.Encoding)) throw new Exception("Product version or concrete categories not applied");
+                if (form.Text != "密码箱 1.2.1.1" || category.Items.Contains("全部") || !category.Items.Contains(ToolCategories.Encoding)) throw new Exception("Product version or concrete categories not applied");
                 if (!tags.Items.Contains("常用") || !tags.Items.Contains("可破解") || tags.Items.Contains("全部")) throw new Exception("Tag picker was not populated");
                 passed++;
                 tags.SelectedItem = "可破解"; ComboBox taggedTools = (ComboBox)typeof(CipherForm).GetField("toolPicker", flags).GetValue(form); foreach (object item in taggedTools.Items) if (!((ICryptoTool)item).Modes.Contains(ToolMode.Crack)) throw new Exception("Tag picker retained a non-crackable tool"); tags.SelectedItem = ToolTags.Any; passed++;

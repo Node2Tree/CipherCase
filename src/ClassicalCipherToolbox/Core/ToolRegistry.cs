@@ -235,6 +235,7 @@ namespace ClassicalCipherToolbox.Core
             AddCodec(tools, "盲文（英语一级）", BrailleCode.Transform);
             AddCodec(tools, "博多码 ITA2", BaudotCode.Transform);
             AddCodec(tools, "中文电报码", ChineseTelegraphCode.Transform);
+            tools.Add(new DelegateCryptoTool("中文输入法码", ToolCategories.Encoding, new[] { ToolMode.Encode, ToolMode.Decode }, new[] { new ToolParameter("scheme", "方案", false, ToolParameterEditor.Choice, ChineseInputCode.SchemeChoices[0], ChineseInputCode.SchemeChoices) }, delegate(ToolRequest r) { return ChineseInputCode.Transform(r.Input, r.Get("scheme"), r.Mode == ToolMode.Decode); }));
             AddCodec(tools, "北约音标字母", NatoPhonetic.Transform);
             AddCodec(tools, "猪圈密码符号", SymbolCodes.Pigpen);
             AddCodec(tools, "旗语", SymbolCodes.FlagSemaphore);
@@ -409,7 +410,7 @@ namespace ClassicalCipherToolbox.Core
         {
             string[] order;
             if (tool.Category == ToolCategories.General) order = new[] { "通用破解", "密码识别器", "分析工作台", "频率", "重合指数", "N-gram", "Kasiski", "Crib 工具" };
-            else if (tool.Category == ToolCategories.Encoding) order = new[] { "自动解码", "Base64", "十六进制", "URL 编码", "Unicode 转义", "二进制", "Base32", "字符集字节", "HTML 实体", "QR Code", "Morse", "条形码", "Base64URL", "Quoted-Printable", "盲文（英语一级）", "中文电报码", "博多码 ITA2", "颜色编码", "取色器与调色盘", "Base58", "ASCII85", "Punycode", "A1Z26", "Tap Code", "北约音标字母", "旗语", "猪圈密码符号" };
+            else if (tool.Category == ToolCategories.Encoding) order = new[] { "自动解码", "Base64", "十六进制", "URL 编码", "Unicode 转义", "二进制", "Base32", "字符集字节", "中文输入法码", "HTML 实体", "QR Code", "Morse", "条形码", "Base64URL", "Quoted-Printable", "盲文（英语一级）", "中文电报码", "博多码 ITA2", "颜色编码", "取色器与调色盘", "Base58", "ASCII85", "Punycode", "A1Z26", "Tap Code", "北约音标字母", "旗语", "猪圈密码符号" };
             else if (tool.Category == ToolCategories.Substitution) order = new[] { "凯撒", "ROT13", "Atbash", "仿射", "ROT-N", "单表替换", "培根", "Keyword Cipher", "Multiplicative", "同音替换", "Book Cipher", "Nomenclator", "Grandpré", "Vatsyayana" };
             else if (tool.Category == ToolCategories.Polyalphabetic) order = new[] { "维吉尼亚", "Beaufort", "Autokey", "Gronsfeld", "Porta", "Running Key", "Enigma", "Variant Beaufort", "Trithemius", "渐进凯撒", "Alberti", "Bellaso", "Ragbaby", "Jefferson Wheel", "Quagmire I", "Quagmire II", "Quagmire III", "Quagmire IV", "Gromark", "Periodic Gromark", "Chaocipher", "Solitaire", "Nicodemus" };
             else if (tool.Category == ToolCategories.Transposition) order = new[] { "栅栏", "列换位", "路线换位", "Scytale", "Reverse", "Redefence", "Caesar Box", "Myszkowski", "AMSCO", "双重列换位", "Turning Grille", "Ubchi", "扰乱式换位", "Swagman", "Cadenus" };

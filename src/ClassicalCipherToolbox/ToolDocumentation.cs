@@ -95,6 +95,7 @@ namespace ClassicalCipherToolbox
                 case "盲文（英语一级）": return "在英语一级盲文 Unicode 点阵与普通字母、数字之间转换。";
                 case "博多码 ITA2": return "在文本与五单位 ITA2 电报码之间转换，自动插入字母/数字换挡码。";
                 case "中文电报码": return "使用内嵌的 Unihan 大陆四位电报码表转换 7078 个汉字。";
+                case "中文输入法码": return "批量查询汉字的拼音、注音、粤拼、仓颉、速成、四角号码和总笔画，并可由输入码反查候选字。";
                 case "北约音标字母": return "在拉丁字母与 Alfa、Bravo 等拼读词之间转换。";
                 case "猪圈密码符号": return "用一组可复制的线框符号表示猪圈密码字母。";
                 case "旗语": return "用成对方向箭头表示旗语字母位置。";
@@ -127,6 +128,7 @@ namespace ClassicalCipherToolbox
                 case "同音替换": case "Grandpré": return "一个明文字母可对应多个数字符号，以摊平单字符频率。解密表仍要求每个数字符号只对应一个明文字母。";
                 case "A1Z26": return "直接使用字母序号表示字符，即 A=1、B=2、…、Z=26。它属于编码而非安全密码。";
                 case "Morse": return "用点、划表示字母和数字；空格分隔字符，斜线分隔单词。";
+                case "中文输入法码": return "从内嵌的 Unicode Unihan 读音和字形属性读取每个汉字的公开码值。正查逐字输出全部读音或码值；反查建立所选方案的索引，因此同一个输入码可以返回多个候选字。速成码取仓颉码的首尾字母，注音由汉语拼音读音转换。";
                 case "Nomenclator": return "使用用户码表同时替换常见词、名称或单字母。加密优先匹配较长条目，避免短条目抢先替换。";
                 case "Book Cipher": return "用共享书本中的词序号和词内字母序号表示字符。本实现坐标写作“词.字母”，两项均从 1 开始。";
                 case "Beaufort": return "使用 C=(K−P) mod 26，变换具有互易性质。破解按候选周期拆列并拟合目标语言频率。";
@@ -240,6 +242,7 @@ namespace ClassicalCipherToolbox
                 case "Base64": return "密码箱 → 5a+G56CB566x；解码恢复“密码箱”。";
                 case "字符集字节": return "文本“中文”、字符集 GB18030 → D6D0CEC4；按同一字符集解码可恢复原文。可选 Unicode 大小端、GB2312/EUC-CN、GBK、GB18030、HZ、ISO-2022-CN、Big5，以及 Mac、CNS、TCA、ETen、IBM5550、TeleText、Wang 中文代码页。";
                 case "中文电报码": return "一丁七 → 0001 0002 0003。";
+                case "中文输入法码": return "选择汉语拼音，中国 → zhong guo；选择仓颉，中国 → L WMGI。切换到解码并输入 zhong guo，可分别查看两个输入码的候选汉字。";
                 case "QR Code": return "输入 HELLO QR，编码后得到 21×21 矩阵和带静区的块状预览；把完整输出送入解码可恢复文本。";
                 case "条形码": return "类型 CODE39、内容 CODE39 可生成条纹；类型 EAN13、输入 690123456789 会自动补校验位 2。";
                 case "取色器与调色盘": return "点击“取色”，或输入 #3366CC；结果显示 RGB、HSL、互补色、邻近色和三角色。";
@@ -290,6 +293,7 @@ namespace ClassicalCipherToolbox
                 case "QR Code": return "当前实现固定为 QR Version 1-L、UTF-8 字节模式，容量为 17 字节。矩阵包含真实纠错码和格式信息；解码入口读取本工具输出的 21×21 0/1 矩阵。";
                 case "条形码": return "Code 39 支持数字、大写字母和 - . 空格 $ / + %；EAN-13 可输入 12 位让工具计算校验位，或输入含正确校验位的 13 位。";
                 case "中文电报码": return "大陆与台湾电报码存在差异。本工具使用 Unicode Unihan 的 kMainlandTelegraph 映射；未收录字符在编码时原样保留，未知数字在解码时用方括号标出。";
+                case "中文输入法码": return "当前收录 Unicode Unihan 公开发布的 kMandarin、kCantonese、kCangjie、kFourCornerCode 与 kTotalStrokes 全量条目，并由这些条目生成拼音首字母、注音和速成码。编码时未收录字符用方括号保留；解码属于码表反查，同码多字时会列出候选而不会擅自选字。";
                 case "盲文（英语一级）": return "使用 Unicode 六点盲文、英语一级字母和数字符号；不展开英语二级盲文缩写。";
                 case "字符集字节": return "编码输出十六进制字节，解码输入可包含空格。UTF-16LE/BE 与 UTF-32LE/BE 已分成独立选项。无法表示某字符或遇到非法字节时会停止并提示；长文本文件编辑器使用同一套字符集选择。";
                 case "密码识别器": return "匹配分由字符格式、文本结构、统计特征和试解语言得分共同生成。语言方法的适用条件：COSINE 适合约 10–60 个拉丁字母的稀疏短样本；LLR 适合约 40–240 字母并能更好处理稀有字母；CHI 适合约 200 字母以上、各期望频数较充分的样本；NGRAM 适合约 100 字母以上并用于区分频率相近的语言。AUTO 在少于 60 字母时选 COSINE，60–239 选 LLR，240 以上选 NGRAM。";

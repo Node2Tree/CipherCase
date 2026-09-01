@@ -162,6 +162,173 @@ namespace ClassicalCipherToolbox.Ciphers
         }
     }
 
+    internal static class ChineseInputCode
+    {
+        internal static readonly string[] SchemeChoices = {
+            "汉语拼音", "汉语拼音（数字声调）", "拼音首字母", "注音", "粤拼", "仓颉", "速成", "四角号码", "总笔画"
+        };
+
+        private sealed class Entry
+        {
+            internal string Character, Mandarin, Cantonese, Cangjie, FourCorner, Strokes;
+        }
+
+        private static readonly Dictionary<string, Entry> Entries = new Dictionary<string, Entry>();
+        private static readonly Dictionary<string, Dictionary<string, List<string>>> Reverse = new Dictionary<string, Dictionary<string, List<string>>>();
+        private static bool loaded;
+
+        internal static string Transform(string input, string scheme, bool reverse)
+        {
+            Load();
+            string selected = string.IsNullOrWhiteSpace(scheme) ? SchemeChoices[0] : scheme;
+            return reverse ? ReverseLookup(input, selected) : Encode(input, selected);
+        }
+
+        private static string Encode(string input, string scheme)
+        {
+            List<string> output = new List<string>();
+            foreach (string unit in UnicodeAnalysis.Units(input ?? string.Empty))
+            {
+                if (string.IsNullOrWhiteSpace(unit)) continue;
+                Entry entry; List<string> codes;
+                if (Entries.TryGetValue(unit, out entry) && (codes = Codes(entry, scheme)).Count > 0) output.Add(string.Join("/", codes.ToArray()));
+                else output.Add("[" + unit + "]");
+            }
+            return string.Join(" ", output.ToArray());
+        }
+
+        private static string ReverseLookup(string input, string scheme)
+        {
+            Dictionary<string, List<string>> index = ReverseIndex(scheme);
+            string[] tokens = (input ?? string.Empty).Split(new[] { ' ', '\t', '\r', '\n', ',', '，', ';', '；', '/', '、' }, StringSplitOptions.RemoveEmptyEntries);
+            if (tokens.Length == 0) throw new CipherException("请输入一个或多个输入码");
+            StringBuilder output = new StringBuilder();
+            foreach (string raw in tokens)
+            {
+                string token = NormalizeQuery(raw, scheme); List<string> values;
+                if (output.Length > 0) output.Append("\r\n");
+                output.Append(raw).Append(" → ");
+                if (!index.TryGetValue(token, out values)) { output.Append("未收录"); continue; }
+                int count = Math.Min(96, values.Count);
+                for (int i = 0; i < count; i++) output.Append(values[i]);
+                if (values.Count > count) output.Append(" …（共 ").Append(values.Count).Append(" 字）");
+            }
+            return output.ToString();
+        }
+
+        private static Dictionary<string, List<string>> ReverseIndex(string scheme)
+        {
+            Dictionary<string, List<string>> index;
+            if (Reverse.TryGetValue(scheme, out index)) return index;
+            index = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            foreach (Entry entry in Entries.Values)
+            {
+                foreach (string code in Codes(entry, scheme))
+                {
+                    string key = NormalizeQuery(code, scheme); List<string> values;
+                    if (key.Length == 0) continue;
+                    if (!index.TryGetValue(key, out values)) { values = new List<string>(); index[key] = values; }
+                    if (!values.Contains(entry.Character)) values.Add(entry.Character);
+                }
+            }
+            foreach (List<string> values in index.Values) values.Sort(CompareCharacters);
+            Reverse[scheme] = index;
+            return index;
+        }
+
+        private static int CompareCharacters(string left, string right)
+        {
+            int a = char.ConvertToUtf32(left, 0), b = char.ConvertToUtf32(right, 0);
+            int ar = a >= 0x4E00 && a <= 0x9FFF ? 0 : a >= 0x3400 && a <= 0x4DBF ? 1 : 2;
+            int br = b >= 0x4E00 && b <= 0x9FFF ? 0 : b >= 0x3400 && b <= 0x4DBF ? 1 : 2;
+            return ar != br ? ar.CompareTo(br) : a.CompareTo(b);
+        }
+
+        private static List<string> Codes(Entry entry, string scheme)
+        {
+            List<string> result = new List<string>();
+            if (scheme == "汉语拼音" || scheme == "汉语拼音（数字声调）" || scheme == "拼音首字母" || scheme == "注音")
+            {
+                foreach (string reading in Split(entry.Mandarin))
+                {
+                    int tone; string plain = PlainPinyin(reading, out tone);
+                    string value = scheme == "汉语拼音" ? plain : scheme == "汉语拼音（数字声调）" ? plain + (tone > 0 ? tone.ToString(CultureInfo.InvariantCulture) : string.Empty) : scheme == "拼音首字母" ? (plain.Length > 0 ? plain.Substring(0, 1) : string.Empty) : Bopomofo(plain, tone);
+                    AddUnique(result, value);
+                }
+            }
+            else if (scheme == "粤拼") foreach (string value in Split(entry.Cantonese)) AddUnique(result, value.ToLowerInvariant());
+            else if (scheme == "仓颉") foreach (string value in Split(entry.Cangjie)) AddUnique(result, value.ToUpperInvariant());
+            else if (scheme == "速成") foreach (string value in Split(entry.Cangjie)) { string code = value.ToUpperInvariant(); AddUnique(result, code.Length < 2 ? code : code.Substring(0, 1) + code.Substring(code.Length - 1)); }
+            else if (scheme == "四角号码") foreach (string value in Split(entry.FourCorner)) AddUnique(result, value);
+            else if (scheme == "总笔画") foreach (string value in Split(entry.Strokes)) AddUnique(result, value);
+            return result;
+        }
+
+        private static string[] Split(string value) { return (value ?? string.Empty).Split(new[] { ' ', '\t', ',' }, StringSplitOptions.RemoveEmptyEntries); }
+        private static void AddUnique(List<string> values, string value) { if (!string.IsNullOrEmpty(value) && !values.Contains(value)) values.Add(value); }
+        private static string NormalizeQuery(string value, string scheme)
+        {
+            string result = (value ?? string.Empty).Trim();
+            if (scheme == "汉语拼音" || scheme == "汉语拼音（数字声调）" || scheme == "拼音首字母") { int tone; string plain = PlainPinyin(result, out tone); return scheme == "汉语拼音（数字声调）" && tone > 0 ? plain + tone.ToString(CultureInfo.InvariantCulture) : plain; }
+            if (scheme == "仓颉" || scheme == "速成") return result.ToUpperInvariant();
+            return result.ToLowerInvariant();
+        }
+
+        private static string PlainPinyin(string value, out int tone)
+        {
+            tone = 0; StringBuilder result = new StringBuilder();
+            foreach (char raw in (value ?? string.Empty).ToLowerInvariant().Normalize(NormalizationForm.FormD))
+            {
+                UnicodeCategory category = CharUnicodeInfo.GetUnicodeCategory(raw);
+                if (category == UnicodeCategory.NonSpacingMark)
+                {
+                    if (raw == '\u0304') tone = 1; else if (raw == '\u0301') tone = 2; else if (raw == '\u030C') tone = 3; else if (raw == '\u0300') tone = 4;
+                    else if (raw == '\u0308' && result.Length > 0 && result[result.Length - 1] == 'u') result[result.Length - 1] = 'v';
+                    continue;
+                }
+                if (raw >= '1' && raw <= '5') { tone = raw - '0'; continue; }
+                if (raw >= 'a' && raw <= 'z') result.Append(raw);
+            }
+            return result.ToString();
+        }
+
+        private static string Bopomofo(string pinyin, int tone)
+        {
+            string value = pinyin, initial = string.Empty;
+            if (value.StartsWith("y"))
+            {
+                string rest = value.Substring(1); value = rest == "i" ? "i" : rest == "u" ? "v" : rest.StartsWith("u") ? "v" + rest.Substring(1) : rest.StartsWith("i") ? rest : "i" + rest;
+            }
+            else if (value.StartsWith("w")) { string rest = value.Substring(1); value = rest == "u" ? "u" : rest.StartsWith("u") ? rest : "u" + rest; }
+            string[] initials = { "zh", "ch", "sh", "b", "p", "m", "f", "d", "t", "n", "l", "g", "k", "h", "j", "q", "x", "r", "z", "c", "s" };
+            string[] symbols = { "ㄓ", "ㄔ", "ㄕ", "ㄅ", "ㄆ", "ㄇ", "ㄈ", "ㄉ", "ㄊ", "ㄋ", "ㄌ", "ㄍ", "ㄎ", "ㄏ", "ㄐ", "ㄑ", "ㄒ", "ㄖ", "ㄗ", "ㄘ", "ㄙ" };
+            for (int i = 0; i < initials.Length; i++) if (value.StartsWith(initials[i])) { initial = symbols[i]; value = value.Substring(initials[i].Length); if ((initials[i] == "j" || initials[i] == "q" || initials[i] == "x") && value.StartsWith("u")) value = "v" + value.Substring(1); break; }
+            if (value == "i" && (initial == "ㄓ" || initial == "ㄔ" || initial == "ㄕ" || initial == "ㄖ" || initial == "ㄗ" || initial == "ㄘ" || initial == "ㄙ")) value = string.Empty;
+            string[] finals = { "iang", "iong", "uang", "ueng", "iao", "ian", "ing", "uai", "uan", "van", "ang", "eng", "ong", "ia", "ie", "iu", "in", "ua", "uo", "ui", "un", "ve", "vn", "ai", "ei", "ao", "ou", "an", "en", "er", "a", "o", "e", "i", "u", "v", "" };
+            string[] finalsZh = { "ㄧㄤ", "ㄩㄥ", "ㄨㄤ", "ㄨㄥ", "ㄧㄠ", "ㄧㄢ", "ㄧㄥ", "ㄨㄞ", "ㄨㄢ", "ㄩㄢ", "ㄤ", "ㄥ", "ㄨㄥ", "ㄧㄚ", "ㄧㄝ", "ㄧㄡ", "ㄧㄣ", "ㄨㄚ", "ㄨㄛ", "ㄨㄟ", "ㄨㄣ", "ㄩㄝ", "ㄩㄣ", "ㄞ", "ㄟ", "ㄠ", "ㄡ", "ㄢ", "ㄣ", "ㄦ", "ㄚ", "ㄛ", "ㄜ", "ㄧ", "ㄨ", "ㄩ", "" };
+            int at = Array.IndexOf(finals, value); if (at < 0) return string.Empty;
+            string[] tones = { "", "", "ˊ", "ˇ", "ˋ", "˙" };
+            return initial + finalsZh[at] + (tone >= 0 && tone < tones.Length ? tones[tone] : string.Empty);
+        }
+
+        private static void Load()
+        {
+            if (loaded) return; loaded = true;
+            Stream resource = Assembly.GetExecutingAssembly().GetManifestResourceStream("ClassicalCipherToolbox.Analysis.ChineseInputCodes");
+            if (resource == null) throw new CipherException("中文输入法码表未嵌入");
+            using (resource) using (GZipStream gzip = new GZipStream(resource, CompressionMode.Decompress)) using (StreamReader reader = new StreamReader(gzip, Encoding.UTF8))
+            {
+                string line; while ((line = reader.ReadLine()) != null)
+                {
+                    string[] fields = line.Split('\t'); int codepoint;
+                    if (fields.Length < 6 || !int.TryParse(fields[0], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out codepoint)) continue;
+                    string character = char.ConvertFromUtf32(codepoint);
+                    Entries[character] = new Entry { Character = character, Mandarin = fields[1], Cantonese = fields[2], Cangjie = fields[3], FourCorner = fields[4], Strokes = fields[5] };
+                }
+            }
+        }
+    }
+
     internal static class NatoPhonetic
     {
         private static readonly string[] Words = { "Alfa","Bravo","Charlie","Delta","Echo","Foxtrot","Golf","Hotel","India","Juliett","Kilo","Lima","Mike","November","Oscar","Papa","Quebec","Romeo","Sierra","Tango","Uniform","Victor","Whiskey","X-ray","Yankee","Zulu" };

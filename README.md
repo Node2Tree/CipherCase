@@ -1,8 +1,8 @@
 # 密码箱
 
-版本 1.2.1。离线 Windows 古典密码工具，交付为单个 `密码箱.exe`。
+版本 1.2.1.1。离线 Windows 古典密码工具，交付为单个 `密码箱.exe`。
 
-共 107 个工具，其中 58 个可破解。分类：通用、编码、替换、多表、换位、方阵；统计分析已并入通用。
+共 108 个工具，其中 58 个可破解。分类：通用、编码、替换、多表、换位、方阵；统计分析已并入通用。
 
 ## 使用
 
@@ -28,6 +28,8 @@
 
 **中文字符集**在「编码 → 字符集字节」中选择。现行格式包括 UTF-8、UTF-16LE/BE、UTF-32LE/BE、GB2312/EUC-CN、GBK/CP936、GB18030、HZ-GB-2312、ISO-2022-CN、Big5/CP950；历史格式包括 Mac 简繁体、CNS 11643、TCA、Big5 ETen、IBM5550、TeleText 和 Wang 台湾代码页。转换采用严格模式，无法表示的字符和非法字节会直接提示。自动解码会尝试这些中文字符集的十六进制字节。
 
+**中文输入法码**在「编码 → 中文输入法码」中选择。支持汉语拼音、数字声调拼音、拼音首字母、注音、粤拼、仓颉、速成、四角号码和总笔画。编码模式可粘贴整段中文批量查码；解码模式输入一个或多个码，逐码列出候选汉字。码表完整收录 [Unicode Unihan](https://www.unicode.org/reports/tr38/) 的 `kMandarin`、`kCantonese`、`kCangjie`、`kFourCornerCode` 和 `kTotalStrokes` 公开条目，注音、首字母与速成由这些码值离线派生。
+
 搜索型破解器可选择 `自动`、`模拟退火`、`爬山`、`延迟接受`、`再加热退火`、`阈值接受`、`大洪水`、`记录到记录`、`自适应退火`。模拟退火适合一般未知密钥；爬山适合已有较好起点；延迟接受和阈值接受适合评分平台；再加热与自适应退火适合局部最优较多的长搜索；大洪水逐步收紧候选下限；记录到记录围绕本轮最佳值保留有限偏离。不同策略可能在相同预算下得到不同候选。
 
 语言：`AUTO`、`ZH`、`EN`、`FR`、`DE`、`ES`、`IT`、`PT`、`NL`、`SV`、`PL`、`TR`。  
@@ -39,7 +41,7 @@
 通用破解、密码识别器、分析工作台、频率、重合指数、N-gram、Kasiski、Crib 工具
 
 **编码**  
-自动解码、Base64、Base64URL、Base32、Base58、ASCII85、十六进制、二进制、URL 编码、Unicode 转义、HTML 实体、Quoted-Printable、Punycode、字符集字节（Unicode、GB2312、GBK、GB18030、HZ、ISO-2022-CN、Big5 及公开历史中文代码页）、Morse、A1Z26、Tap Code、盲文（英语一级）、博多码 ITA2、中文电报码、北约音标字母、猪圈密码符号、旗语、条形码（Code 39 / EAN-13）、QR Code、颜色编码、取色器与调色盘
+自动解码、Base64、Base64URL、Base32、Base58、ASCII85、十六进制、二进制、URL 编码、Unicode 转义、HTML 实体、Quoted-Printable、Punycode、字符集字节（Unicode、GB2312、GBK、GB18030、HZ、ISO-2022-CN、Big5 及公开历史中文代码页）、中文输入法码（拼音、注音、粤拼、仓颉、速成、四角号码、总笔画）、Morse、A1Z26、Tap Code、盲文（英语一级）、博多码 ITA2、中文电报码、北约音标字母、猪圈密码符号、旗语、条形码（Code 39 / EAN-13）、QR Code、颜色编码、取色器与调色盘
 
 **替换**  
 凯撒、ROT13、ROT-N、Atbash、仿射、培根、单表替换、同音替换、Keyword Cipher、Multiplicative、Vatsyayana、Grandpré、Nomenclator、Book Cipher
@@ -66,6 +68,7 @@ Polybius、Playfair、Hill 2×2、Hill 3×3、Bifid、Trifid、Digrafid、ADFGX�
 - 1.1.9：搜索型破解器新增阈值接受、大洪水、记录到记录和自适应退火；Running Key 接入统一策略选择与进度状态。
 - 1.1.9.1：调色盘与结果文本改为独立布局，颜色块不再覆盖文字；色块直接显示高对比度 HEX 标签。
 - 1.2.1：加入 Windows 离线可用的完整公开中文字符集目录；分离 GB2312、GBK 与 GB18030；补齐 Unicode 大小端、交换格式和历史地区代码页，并接入自动解码与文件导入。
+- 1.2.1.1：新增中文输入法码工具；内嵌 Unihan 全量公开读音与字形码表，支持整段查码、逐码反查和同码候选展示。
 
 ## 编译
 
