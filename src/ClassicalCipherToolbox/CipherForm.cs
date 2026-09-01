@@ -45,6 +45,7 @@ namespace ClassicalCipherToolbox
         private readonly Button universalButton;
         private readonly Button clueButton;
         private readonly FlowLayoutPanel colorPalettePanel;
+        private readonly TableLayoutPanel colorPaletteLayout;
         private ICryptoTool currentTool;
         private ToolMode activeMode;
         private bool loadingBatch;
@@ -54,7 +55,7 @@ namespace ClassicalCipherToolbox
 
         internal CipherForm()
         {
-            Text = "密码箱 1.1.9";
+            Text = "密码箱 1.1.9.1";
             StartPosition = FormStartPosition.CenterScreen;
             MinimumSize = new Size(800, 600);
             ClientSize = new Size(960, 700);
@@ -176,13 +177,18 @@ namespace ClassicalCipherToolbox
             outputBox.Margin = new Padding(0, 2, 0, 2);
             Panel outputPanel = new Panel { Dock = DockStyle.Fill, Margin = Padding.Empty };
             candidateGrid = CreateCandidateGrid();
-            colorPalettePanel = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 58, Visible = false, BackColor = Surface, Padding = new Padding(4), WrapContents = false };
+            colorPaletteLayout = new TableLayoutPanel { Dock = DockStyle.Fill, Margin = Padding.Empty, Padding = Padding.Empty, ColumnCount = 1, RowCount = 2, BackColor = Surface };
+            colorPaletteLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            colorPaletteLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            colorPaletteLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            colorPalettePanel = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, MinimumSize = new Size(0, 58), Visible = false, BackColor = Surface, Padding = new Padding(4), Margin = Padding.Empty, WrapContents = false, AutoScroll = true };
             candidateGrid.SelectionChanged += CandidateSelectionChanged;
             candidateGrid.CellDoubleClick += CandidateGridDoubleClick;
-            outputPanel.Controls.Add(outputBox);
-            outputPanel.Controls.Add(colorPalettePanel);
+            colorPaletteLayout.Controls.Add(colorPalettePanel, 0, 0);
+            colorPaletteLayout.Controls.Add(outputBox, 0, 1);
+            outputPanel.Controls.Add(colorPaletteLayout);
             outputPanel.Controls.Add(candidateGrid);
-            colorPalettePanel.BringToFront();
+            candidateGrid.BringToFront();
             outputPanel.Resize += delegate { candidateGrid.Width = Math.Min(560, Math.Max(320, outputPanel.ClientSize.Width / 2)); };
             rootLayout.Controls.Add(outputPanel, 0, 4);
             statusLabel = new Label();
@@ -439,7 +445,11 @@ namespace ClassicalCipherToolbox
         }
         private void UpdateColorPalette(string output)
         {
-            colorPalettePanel.Controls.Clear(); colorPalettePanel.Visible = currentTool != null && currentTool.Name == "取色器与调色盘" && !string.IsNullOrEmpty(output); if (!colorPalettePanel.Visible) return; int at = output.IndexOf("调色盘：", StringComparison.Ordinal); if (at < 0) return; string line = output.Substring(at + 4).Split(new[] { '\r', '\n' })[0]; foreach (string token in line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries)) { try { Color color = ColorTranslator.FromHtml(token); Panel swatch = new Panel { Width = 72, Height = 42, BackColor = color, Margin = new Padding(3) }; tips.SetToolTip(swatch, token); swatch.Click += delegate { inputBox.Text = token; }; colorPalettePanel.Controls.Add(swatch); } catch { } }
+            colorPalettePanel.Controls.Clear(); colorPalettePanel.Visible = currentTool != null && currentTool.Name == "取色器与调色盘" && !string.IsNullOrEmpty(output); if (!colorPalettePanel.Visible) return; int at = output.IndexOf("调色盘：", StringComparison.Ordinal); if (at < 0) { colorPalettePanel.Visible = false; return; } string line = output.Substring(at + 4).Split(new[] { '\r', '\n' })[0]; foreach (string token in line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries)) { try { Color color = ColorTranslator.FromHtml(token); Button swatch = new Button { Width = 82, Height = 42, Text = token, BackColor = color, ForeColor = ReadableColor(color), FlatStyle = FlatStyle.Flat, Margin = new Padding(3), TabStop = false, UseVisualStyleBackColor = false }; swatch.FlatAppearance.BorderColor = Color.FromArgb(90, 34, 41, 54); tips.SetToolTip(swatch, token + " · 点击设为当前颜色"); swatch.Click += delegate { inputBox.Text = token; }; colorPalettePanel.Controls.Add(swatch); } catch { } }
+        }
+        private static Color ReadableColor(Color background)
+        {
+            double luminance = (background.R * 299.0 + background.G * 587.0 + background.B * 114.0) / 1000.0; return luminance >= 150.0 ? Color.FromArgb(24, 28, 36) : Color.White;
         }
         private void CopyOutput()
         {

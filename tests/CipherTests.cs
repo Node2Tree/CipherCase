@@ -496,7 +496,7 @@ namespace ClassicalCipherToolbox.Tests
                 Dictionary<string, TextBox> parameters = (Dictionary<string, TextBox>)typeof(CipherForm).GetField("parameterBoxes", flags).GetValue(form);
                 ComboBox category = (ComboBox)typeof(CipherForm).GetField("categoryPicker", flags).GetValue(form);
                 ComboBox tags = (ComboBox)typeof(CipherForm).GetField("tagPicker", flags).GetValue(form);
-                if (form.Text != "密码箱 1.1.9" || category.Items.Contains("全部") || !category.Items.Contains(ToolCategories.Encoding)) throw new Exception("Product version or concrete categories not applied");
+                if (form.Text != "密码箱 1.1.9.1" || category.Items.Contains("全部") || !category.Items.Contains(ToolCategories.Encoding)) throw new Exception("Product version or concrete categories not applied");
                 if (!tags.Items.Contains("常用") || !tags.Items.Contains("可破解") || tags.Items.Contains("全部")) throw new Exception("Tag picker was not populated");
                 passed++;
                 tags.SelectedItem = "可破解"; ComboBox taggedTools = (ComboBox)typeof(CipherForm).GetField("toolPicker", flags).GetValue(form); foreach (object item in taggedTools.Items) if (!((ICryptoTool)item).Modes.Contains(ToolMode.Crack)) throw new Exception("Tag picker retained a non-crackable tool"); tags.SelectedItem = ToolTags.Any; passed++;
@@ -534,6 +534,16 @@ namespace ClassicalCipherToolbox.Tests
                 if (rootLayout.RowStyles[1].Height <= 52 || parameterPickers["language"].Width <= 180 || string.IsNullOrEmpty(tips.GetToolTip(parameterPickers["language"]))) throw new Exception("Parameter hints are still clipped without an accessible full label");
                 passed++;
                 if (tools.DropDownWidth < tools.Width) throw new Exception("Tool dropdown is narrower than its display field");
+                passed++;
+                category.SelectedItem = ToolCategories.Encoding;
+                for (int i = 0; i < tools.Items.Count; i++) if (((ICryptoTool)tools.Items[i]).Name == "取色器与调色盘") { tools.SelectedIndex = i; break; }
+                typeof(CipherForm).GetMethod("SetMode", flags).Invoke(form, new object[] { ToolMode.Analyze });
+                input.Text = "#102030";
+                FlowLayoutPanel palette = (FlowLayoutPanel)typeof(CipherForm).GetField("colorPalettePanel", flags).GetValue(form);
+                deadline = DateTime.UtcNow.AddSeconds(2);
+                while ((!palette.Visible || palette.Controls.Count != 6) && DateTime.UtcNow < deadline) { Application.DoEvents(); Thread.Sleep(20); }
+                if (!palette.Visible || palette.Controls.Count != 6 || palette.Bottom > output.Top) throw new Exception("Color palette still overlaps the output text area");
+                foreach (Control swatch in palette.Controls) if (!(swatch is Button) || string.IsNullOrEmpty(swatch.Text) || swatch.ForeColor == swatch.BackColor) throw new Exception("Color swatch label is not readable");
                 passed++;
                 ProgressBar workProgress = (ProgressBar)typeof(CipherForm).GetField("workProgress", flags).GetValue(form);
                 Button cancelWork = (Button)typeof(CipherForm).GetField("cancelWorkButton", flags).GetValue(form);
