@@ -151,6 +151,7 @@ namespace ClassicalCipherToolbox.Analysis
                 if (TokenWidthVariation(tokens) >= 3 && HasPunctuation(source)) AddGuess(guesses, "跨行棋盘", 83, "数字段长度随字符编码变化并保留文本边界");
             }
             if (source == source.ToLowerInvariant() && LooksLikeInputCodeSequence(source)) { string scheme; int hits = ChineseCodeTables.BestMatch(source, out scheme); int tokens = source.Split(new[] { ' ', '\t', '\r', '\n', ',' }, StringSplitOptions.RemoveEmptyEntries).Length; if (hits >= 3 && hits * 4 >= tokens * 3) AddGuess(guesses, "中文输入法码", 91, scheme + " 码表命中 " + hits + "/" + tokens + " 个输入码"); }
+            int fanqieTotal, fanqieHits = FanqieWorkbench.MatchCount(source, out fanqieTotal); if (fanqieTotal >= 2 && fanqieHits * 4 >= fanqieTotal * 3 && Digits(source).Length >= fanqieTotal / 2) AddGuess(guesses, "反切码", 94, "声母代表字、韵母代表字和数字声调命中 " + fanqieHits + "/" + fanqieTotal + " 组");
         }
 
         private static string RemoveWhitespace(string value) { StringBuilder result = new StringBuilder(); foreach (char c in value ?? string.Empty) if (!char.IsWhiteSpace(c)) result.Append(c); return result.ToString(); }
@@ -369,3 +370,4 @@ namespace ClassicalCipherToolbox.Analysis
         private static string Letters(string input) { StringBuilder r = new StringBuilder(); foreach (char raw in input ?? string.Empty) { char c = char.ToUpperInvariant(raw); if (c >= 'A' && c <= 'Z') r.Append(c); } return r.ToString(); }
     }
 }
+

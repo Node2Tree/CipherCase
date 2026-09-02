@@ -95,6 +95,11 @@ namespace ClassicalCipherToolbox
                 case "盲文（英语一级）": return "在英语一级盲文 Unicode 点阵与普通字母、数字之间转换。";
                 case "博多码 ITA2": return "在文本与五单位 ITA2 电报码之间转换，自动插入字母/数字换挡码。";
                 case "中文电报码": return "使用内嵌的 Unihan 大陆四位电报码表转换 7078 个汉字。";
+                case "中文电码加密": return "在四位中文电码上加减 0–9999 的密钥数；破解枚举密钥并用现代汉语或文言文模型排序。";
+                case "中文语言评分": return "分别以现代汉语和文言文常用字、词组评价中文文本，并可自动选择更接近的模型。";
+                case "反切码": return "用声母代表字与韵母代表字组成可反查的普通话反切对，保留数字声调。";
+                case "中文代码本": return "用可导入的中文词组代码本加解密，编码时优先匹配最长词组。";
+                case "中文隐写分析": return "自动枚举行首、行尾、固定间隔、逐列、蛇形、对角线和螺旋读取路径，并按中文模型排序。";
                 case "中文输入法码": return "批量查询拼音、注音、双拼、形码、音形码、方言码和检字码，并可用精确码或通配符反查候选字。";
                 case "中文编码工作台": return "把每个汉字的输入法码、读音、检字信息、异体、IDS、Unicode 和常见字符集字节集中到同一页。";
                 case "字符详情卡": return "针对单个 Unicode 字符汇总所有已收录的输入法码、语音编码、字符集字节、释义与拆字信息。";
@@ -139,6 +144,11 @@ namespace ClassicalCipherToolbox
                 case "A1Z26": return "直接使用字母序号表示字符，即 A=1、B=2、…、Z=26。它属于编码而非安全密码。";
                 case "Morse": return "用点、划表示字母和数字；空格分隔字符，斜线分隔单词。";
                 case "中文输入法码": return "从内嵌的 Unicode Unihan 读音和字形属性读取每个汉字的公开码值。正查逐字输出全部读音或码值；反查建立所选方案的索引，因此同一个输入码可以返回多个候选字。速成码取仓颉码的首尾字母，注音由汉语拼音读音转换。";
+                case "中文语言评分": return "保留汉字后，按模型中的常用字次序和常见连续词组累积得分。自动模式同时计算现代汉语与文言文，采用较高者；样本长度限制显示匹配的上限，匹配不是正确率。";
+                case "中文电码加密": return "先把每个汉字转为四位大陆电码，再计算 C=(P+K) mod 10000；解密使用 P=(C−K) mod 10000。破解枚举全部一万个密钥数，联合有效电码覆盖率和所选中文语言模型排列候选。";
+                case "反切码": return "从汉字首个普通话读音拆出声母、韵母和声调，以固定代表字记录声母与韵母；解码时重组拼音，再调用内置读音索引列出同音候选。";
+                case "中文代码本": return "代码本同时建立“词组→代码”和“代码→词组”索引。加密从当前位置优先取最长词组，避免“中国”被“中”抢先匹配；解密按代码分隔符逐项查表。";
+                case "中文隐写分析": return "把文本按 Unicode 字符处理，生成每行固定位置、固定步长和多种方阵路线的候选读法，再以现代汉语或文言文评分并去除重复结果。";
                 case "中文编码工作台": case "字符详情卡": return "先按 Unicode 文本元素拆分输入，再关联 Unihan 属性、公开输入法码表、IDS 拆字和字符集编码器。补充平面字符以完整码点处理，不会拆成两个代理项。";
                 case "中文码表工作台": return "内置码表建立“字→码”和“码→候选字”双向索引；反查支持 ? 单字符和 * 任意长度通配符。自定义码表会识别 Rime/CIN 常见的制表符或空格分列。";
                 case "中文语音与罗马化": return "读音以 Unihan 和内置方言码表为底稿，再按目标方案转换声母、韵母或符号。多音字保留多个读音，不在缺少上下文时擅自选定。";
@@ -226,7 +236,7 @@ namespace ClassicalCipherToolbox
             StringBuilder result = new StringBuilder();
             result.Append("1. 在主窗口选择“").Append(tool.Category).Append(" → ").Append(tool.Name).Append("”；也可先选标签缩小工具列表。\r\n");
             result.Append("2. 选择所需模式并填写该模式显示的参数；标为必填的参数不能为空。\r\n");
-            if (tool.Name == "Book Cipher" || tool.Name == "Nomenclator" || tool.Name == "Running Key" || tool.Name == "VIC" || tool.Name == "中文码表工作台") result.Append("   长文本参数可双击输入框或点击 … 打开可缩放编辑器，并可读取文本文件。\r\n");
+            if (tool.Name == "Book Cipher" || tool.Name == "Nomenclator" || tool.Name == "Running Key" || tool.Name == "VIC" || tool.Name == "中文码表工作台" || tool.Name == "中文代码本") result.Append("   长文本参数可双击输入框或点击 … 打开可缩放编辑器，并可读取文本文件。\r\n");
             result.Append("3. 输入或拖入文本。停止输入后会自动处理。\r\n");
             if (tool.Modes.Contains(ToolMode.Crack)) result.Append("4. 破解结果显示在候选面板；选择候选可查看对应明文、密钥和评分。带已知明文参数时点击“明文”使用可缩放编辑器；长搜索在窗口底部显示进度，点击 × 可取消。\r\n");
             else result.Append("4. 输出区实时显示结果；“互换”可把结果送回输入区。\r\n");
@@ -261,6 +271,11 @@ namespace ClassicalCipherToolbox
                 case "Base64": return "密码箱 → 5a+G56CB566x；解码恢复“密码箱”。";
                 case "字符集字节": return "文本“中文”、字符集 GB18030 → D6D0CEC4；按同一字符集解码可恢复原文。可选 Unicode 大小端、GB2312/EUC-CN、GBK、GB18030、HZ、ISO-2022-CN、Big5，以及 Mac、CNS、TCA、ETen、IBM5550、TeleText、Wang 中文代码页。";
                 case "中文电报码": return "一丁七 → 0001 0002 0003。";
+                case "中文电码加密": return "输入“中国人民”，密钥数 20，先生成加密后的四位数字组；使用相同密钥解密，或在破解模式自动恢复密钥和原文。";
+                case "中文语言评分": return "输入“我们正在处理这个问题”会偏向现代汉语；输入“天地玄黄，宇宙洪荒”会偏向文言文。";
+                case "反切码": return "中 → 知翁1；解码“知翁1”会显示 zhong1 及“中”等同音候选字。";
+                case "中文代码本": return "代码本填写“中国=88”“中=1”“人民=2”；加密“中国人民”得到 88 2，并因最长匹配不会先使用“中=1”。";
+                case "中文隐写分析": return "输入四行分别以“中、国、人、民”开头的文本，选择藏头/藏尾，候选中会出现“中国人民”。";
                 case "中文输入法码": return "选择汉语拼音，中国 → zhong guo；选择仓颉，中国 → L WMGI。切换到解码并输入 zhong guo，可分别查看两个输入码的候选汉字。";
                 case "中文编码工作台": return "输入“汉字”，同页查看 han/zi、注音、粤拼、五笔、仓颉、四角号码、IDS、UTF-8、GB18030 与 Big5。";
                 case "字符详情卡": return "输入“漢”，查看 U+6F22、读音、仓颉、五笔、繁简异体、IDS 与各字符集字节。只取第一个 Unicode 字符。";
@@ -289,6 +304,8 @@ namespace ClassicalCipherToolbox
                 return "语言分比较候选与所选语言模型的接近程度，并按样本长度限制最高分；它不是正确率，也不会再取 100。匹配表示密文结构对密码家族的支持程度，综合用于最终排序。候选会在搜索过程中持续更新；双击候选可进入对应工具。";
             if (tool.Name == "密码识别器")
                 return "每一项依次显示排名、类型、匹配分和判断依据。字符签名条目显示命中的字符集或分组规则；单表与换位条目显示实际试解参数；周期条目显示整体 IC、周期、分列 IC、Kasiski 计数、语言和候选密钥。选择候选后可直接查看完整依据。";
+            if (tool.Name == "中文电码加密" || tool.Name == "中文隐写分析" || tool.Name == "中文语言评分")
+                return "中文匹配用于比较同批候选，不表示正确概率。短文本可能同时接近现代汉语和文言文；应结合电码有效数、读取路径、上下文和已知片段判断。";
             if (tool.Category == ToolCategories.Encoding || tool.Category == ToolCategories.Chinese)
                 return "编码只改变表示形式，不隐藏信息。解码结果应与原文本一致；字节类工具默认按 UTF-8 解释，字符集字节工具则按所选字符集解释。二维码和条形码同时给出机器位串与屏幕预览。";
             if (tool.Modes.Contains(ToolMode.Crack))
@@ -302,6 +319,8 @@ namespace ClassicalCipherToolbox
         {
             if (tool.Name == "通用破解")
                 return "识别正确但候选缺失：在算法线索中填写识别器显示的名称，并确认密文长度满足该破解器要求。候选不自然：核对语言；中文原文或中文编码用 ZH。已知片段未生效：使用“明文:”前缀，按预计明文顺序填写连续片段，不要填写解释、引号或通配符。搜索过早结束时选择“深入”，并保持输入不变直到进度完成。";
+            if (tool.Name == "中文电码加密") return "电码必须能整理成连续的四位数字组。破解候选较接近时，增加密文长度并明确选择现代汉语或文言文；大陆与台湾电码表不同，码表版本不符时无法得到完整原文。";
+            if (tool.Name == "中文代码本") return "每行填写“词组=代码”，也可写“代码 词组”；一项多个代码用斜线分隔。解密出现方括号表示该代码未收录，需导入加密时使用的同一代码本。";
             if (tool.Category == ToolCategories.Encoding || tool.Category == ToolCategories.Chinese)
                 return "解码失败时，先去掉说明文字，只保留编码主体；再检查填充符、字符集和格式选项。字符集字节出现乱码通常表示 UTF-8、GB18030、Big5 或 Shift_JIS 选择错误。QR Code 解码需要粘贴本工具给出的 21×21 矩阵；图形预览本身不作为输入。";
             StringBuilder result = new StringBuilder();
@@ -322,6 +341,11 @@ namespace ClassicalCipherToolbox
                 case "QR Code": return "当前实现固定为 QR Version 1-L、UTF-8 字节模式，容量为 17 字节。矩阵包含真实纠错码和格式信息；解码入口读取本工具输出的 21×21 0/1 矩阵。";
                 case "条形码": return "Code 39 支持数字、大写字母和 - . 空格 $ / + %；EAN-13 可输入 12 位让工具计算校验位，或输入含正确校验位的 13 位。";
                 case "中文电报码": return "大陆与台湾电报码存在差异。本工具使用 Unicode Unihan 的 kMainlandTelegraph 映射；未收录字符在编码时原样保留，未知数字在解码时用方括号标出。";
+                case "中文电码加密": return "该入口实现固定密钥数加减法，适合早期电码加密和快速穷举。自动破解固定尝试 0000–9999，并显示进度。";
+                case "中文语言评分": return "现代与文言模型是内置轻量启发式模型，适合候选排序并保持单文件体量。很短的句子、专名、方言和生僻古籍应结合人工判断。";
+                case "反切码": return "本工具使用现代普通话声韵拆分和一套稳定代表字。多音字编码采用首个收录读音，解码会保留同音候选；历史韵书可在后续版本作为独立声韵方案加入。";
+                case "中文代码本": return "代码本只在当前处理过程中使用。不同词组不要复用同一代码；一词多码可以导入和解码，但加密默认采用该词条列出的第一个代码。";
+                case "中文隐写分析": return "自动模式可能生成较多偶然可读片段。行结构会用于藏头、藏尾和同列提取；方阵宽度已知时填写宽度可减少候选。工具不会修改原文。";
                 case "中文输入法码": return "读音、部首、笔画、仓颉和四角号码来自 Unicode Unihan；五笔、郑码、二笔、表形码、行列、大易、嘸蝦米、笔顺、音形和方言方案来自随程序发布的公开码表。编码时未收录字符用方括号保留；反查支持 ? 与 *，同码候选按常用程度优先。";
                 case "中文编码工作台": case "字符详情卡": return "工作台最多展开前 64 个 Unicode 字符，详情卡只处理第一个字符。码表没有的项目不会显示；“—”表示所选字符集不能无损表示该字符。";
                 case "中文码表工作台": return "内置方案来自公开码表，方案版本和候选顺序可能与特定输入法发行版不同。自定义码表只在当前处理过程中使用，不写入程序或磁盘。";
@@ -359,3 +383,4 @@ namespace ClassicalCipherToolbox
         private static bool IsAnalysisTool(string name) { return name == "分析工作台" || name == "频率" || name == "N-gram" || name == "重合指数" || name == "Kasiski"; }
     }
 }
+

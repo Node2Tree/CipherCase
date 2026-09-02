@@ -185,6 +185,15 @@ namespace ClassicalCipherToolbox.Tests
             if (CipherIdentifier.Identify("D6D0CEC4", string.Empty).IndexOf("中文字符集字节", StringComparison.Ordinal) < 0) throw new Exception("Universal identifier did not promote Chinese charset bytes"); passed++;
             string inputCodes = ChineseInputCode.Transform("中国人民", "五笔86", false); if (CipherIdentifier.Identify(inputCodes, string.Empty).IndexOf("中文输入法码", StringComparison.Ordinal) < 0) throw new Exception("Universal identifier did not promote Chinese input codes: " + inputCodes); passed++;
             string comparison = ChineseWorkbench.CharsetComparison("中文𠀀"); if (comparison.IndexOf("GB18030", StringComparison.Ordinal) < 0 || comparison.IndexOf("无法表示", StringComparison.Ordinal) < 0) throw new Exception("Charset comparison failed"); passed++;
+            string selected; double modernScore = ChineseLanguageScoring.Score("我们正在使用中文密码工具处理这个问题", "自动", out selected); if (selected != "现代汉语" || modernScore <= 40) throw new Exception("Modern Chinese model selection failed: " + selected + " " + modernScore); passed++;
+            double classicalScore = ChineseLanguageScoring.Score("天地玄黄宇宙洪荒日月盈昃辰宿列张", "自动", out selected); if (selected != "文言文" || classicalScore <= 40) throw new Exception("Classical Chinese model selection failed: " + selected + " " + classicalScore); passed++;
+            string encryptedTelegraph = ChineseTelegraphCipher.Transform("中华人民共和国人民国家社会发展", "20", false); Check("Chinese telegraph additive round trip", "中华人民共和国人民国家社会发展", ChineseTelegraphCipher.Transform(encryptedTelegraph, "20", true));
+            string crackedTelegraph = ChineseTelegraphCipher.Crack(new ToolRequest(ToolMode.Crack, encryptedTelegraph, new Dictionary<string, string> { { "model", "现代汉语" } })); if (!crackedTelegraph.StartsWith("#1  密钥 0020", StringComparison.Ordinal) || crackedTelegraph.IndexOf("中华人民共和国", StringComparison.Ordinal) < 0) throw new Exception("Chinese telegraph additive crack missed key 20: " + crackedTelegraph); passed++;
+            string universalTelegraph = UniversalCracker.Crack(new ToolRequest(ToolMode.Crack, encryptedTelegraph, new Dictionary<string, string> { { "language", "ZH" }, { "effort", "快速" }, { "clue", string.Empty } })); if (universalTelegraph.IndexOf("类型 中文电码加密", StringComparison.Ordinal) < 0 || universalTelegraph.IndexOf("中华人民共和国", StringComparison.Ordinal) < 0) throw new Exception("Universal crack did not route Chinese telegraph encryption: " + universalTelegraph); passed++;
+            Check("Fanqie encode", "知翁1", FanqieWorkbench.Transform("中", false)); string fanqie = FanqieWorkbench.Transform("知翁1", true); if (fanqie.IndexOf("zhong1", StringComparison.Ordinal) < 0 || fanqie.IndexOf("中", StringComparison.Ordinal) < 0) throw new Exception("Fanqie reverse lookup failed: " + fanqie); passed++;
+            string fanqieCipher = FanqieWorkbench.Transform("中国人民", false); if (!CipherIdentifier.Identify(fanqieCipher, string.Empty).StartsWith("#1  类型 反切码", StringComparison.Ordinal)) throw new Exception("Identifier missed fanqie code: " + fanqieCipher); passed++;
+            string codebook = "中国=88\n中=1\n人民=2"; Check("Chinese codebook longest match", "88 2", ChineseCodebookCipher.Transform("中国人民", codebook, false)); Check("Chinese codebook round trip", "中国人民", ChineseCodebookCipher.Transform("88 2", codebook, true));
+            string hidden = ChineseSteganalysis.Analyze(new ToolRequest(ToolMode.Crack, "中甲\n国乙\n人丙\n民丁", new Dictionary<string, string> { { "path", "藏头/藏尾" }, { "model", "现代汉语" } })); if (hidden.IndexOf("文本：中国人民", StringComparison.Ordinal) < 0) throw new Exception("Chinese acrostic analysis missed line initials: " + hidden); passed++;
         }
 
         private static void CheckExtendedCiphers()
@@ -431,7 +440,7 @@ namespace ClassicalCipherToolbox.Tests
         private static void CheckToolRegistry()
         {
             IList<ICryptoTool> tools = ToolRegistry.CreateAll();
-            if (tools.Count != 118) throw new Exception("Tool registry: expected 118 tools but got " + tools.Count);
+            if (tools.Count != 123) throw new Exception("Tool registry: expected 123 tools but got " + tools.Count);
             bool foundCrack = false;
             bool foundAnalyze = false;
             int crackable = 0;
@@ -441,8 +450,8 @@ namespace ClassicalCipherToolbox.Tests
                 if (tool.Modes.Contains(ToolMode.Analyze)) foundAnalyze = true;
             }
             if (!foundCrack || !foundAnalyze) throw new Exception("Tool registry missing crack or analysis modes");
-            if (crackable != 58) throw new Exception("Tool registry: expected 58 crackable tools but got " + crackable);
-            string[] expectedCrackers = { "自动解码", "ROT13", "Atbash", "培根", "A1Z26", "Tap Code", "Morse", "Keyword Cipher", "Multiplicative", "Reverse", "Hill 3×3", "Hill 2×2", "Morbit", "Pollux", "Turning Grille", "列换位", "Myszkowski", "AMSCO", "Autokey", "Playfair", "ADFGX", "ADFGVX", "Fractionated Morse", "Nihilist", "跨行棋盘", "Polybius", "Bifid", "同音替换", "Two-square", "Four-square", "Trifid", "双重列换位", "Ubchi", "Running Key", "Bazeries", "Alberti", "Bellaso", "Ragbaby", "Jefferson Wheel", "Three-square", "Digrafid", "Enigma" };
+            if (crackable != 60) throw new Exception("Tool registry: expected 60 crackable tools but got " + crackable);
+            string[] expectedCrackers = { "自动解码", "中文电码加密", "中文隐写分析", "ROT13", "Atbash", "培根", "A1Z26", "Tap Code", "Morse", "Keyword Cipher", "Multiplicative", "Reverse", "Hill 3×3", "Hill 2×2", "Morbit", "Pollux", "Turning Grille", "列换位", "Myszkowski", "AMSCO", "Autokey", "Playfair", "ADFGX", "ADFGVX", "Fractionated Morse", "Nihilist", "跨行棋盘", "Polybius", "Bifid", "同音替换", "Two-square", "Four-square", "Trifid", "双重列换位", "Ubchi", "Running Key", "Bazeries", "Alberti", "Bellaso", "Ragbaby", "Jefferson Wheel", "Three-square", "Digrafid", "Enigma" };
             foreach (string name in expectedCrackers)
             {
                 ICryptoTool match = null; foreach (ICryptoTool tool in tools) if (tool.Name == name) { match = tool; break; }
@@ -541,7 +550,7 @@ namespace ClassicalCipherToolbox.Tests
                 Dictionary<string, TextBox> parameters = (Dictionary<string, TextBox>)typeof(CipherForm).GetField("parameterBoxes", flags).GetValue(form);
                 ComboBox category = (ComboBox)typeof(CipherForm).GetField("categoryPicker", flags).GetValue(form);
                 ComboBox tags = (ComboBox)typeof(CipherForm).GetField("tagPicker", flags).GetValue(form);
-                if (form.Text != "密码箱 1.2.2" || category.Items.Contains("全部") || !category.Items.Contains(ToolCategories.Encoding) || !category.Items.Contains(ToolCategories.Chinese)) throw new Exception("Product version or concrete categories not applied");
+                if (form.Text != "密码箱 1.2.3" || category.Items.Contains("全部") || !category.Items.Contains(ToolCategories.Encoding) || !category.Items.Contains(ToolCategories.Chinese)) throw new Exception("Product version or concrete categories not applied");
                 if (!tags.Items.Contains("常用") || !tags.Items.Contains("可破解") || tags.Items.Contains("全部")) throw new Exception("Tag picker was not populated");
                 passed++;
                 tags.SelectedItem = "可破解"; ComboBox taggedTools = (ComboBox)typeof(CipherForm).GetField("toolPicker", flags).GetValue(form); foreach (object item in taggedTools.Items) if (!((ICryptoTool)item).Modes.Contains(ToolMode.Crack)) throw new Exception("Tag picker retained a non-crackable tool"); tags.SelectedItem = ToolTags.Any; passed++;
@@ -647,3 +656,4 @@ namespace ClassicalCipherToolbox.Tests
         }
     }
 }
+

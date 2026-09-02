@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Text;
 using System.Threading.Tasks;
 using ClassicalCipherToolbox.Core;
+using ClassicalCipherToolbox.Ciphers;
 
 namespace ClassicalCipherToolbox.Analysis
 {
@@ -15,9 +16,9 @@ namespace ClassicalCipherToolbox.Analysis
         private sealed class ClueInfo { internal string Algorithm = string.Empty; internal string Plaintext = string.Empty; }
 
         private static readonly HashSet<string> DeepTools = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Two-square", "Four-square", "Trifid", "双重列换位", "Ubchi", "同音替换", "Fractionated Morse", "Nihilist", "跨行棋盘", "Bifid", "Polybius", "Three-square", "Digrafid" };
-        private static readonly HashSet<string> FastTools = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "自动解码", "凯撒", "仿射", "ROT-N", "栅栏", "维吉尼亚", "Beaufort", "Variant Beaufort", "Porta", "Gronsfeld", "渐进凯撒", "Scytale", "Caesar Box", "Redefence", "路线换位", "Morse", "A1Z26", "Tap Code", "培根", "ROT13", "Atbash", "单表替换" };
+        private static readonly HashSet<string> FastTools = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "自动解码", "凯撒", "仿射", "ROT-N", "栅栏", "维吉尼亚", "Beaufort", "Variant Beaufort", "Porta", "Gronsfeld", "渐进凯撒", "Scytale", "Caesar Box", "Redefence", "路线换位", "Morse", "A1Z26", "Tap Code", "培根", "ROT13", "Atbash", "单表替换", "中文电码加密", "中文隐写分析" };
         private static readonly HashSet<string> DirectTools = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Morse", "A1Z26", "Tap Code", "培根", "ROT13", "Atbash" };
-        private static readonly HashSet<string> IdentifiedDecodeTools = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Base64", "Base64URL", "Base32", "Base58", "ASCII85", "十六进制", "二进制", "URL 编码", "Unicode 转义", "HTML 实体", "Quoted-Printable", "Punycode", "字符集字节", "盲文（英语一级）", "博多码 ITA2", "中文电报码", "猪圈密码符号", "旗语", "条形码", "QR Code", "颜色编码" };
+        private static readonly HashSet<string> IdentifiedDecodeTools = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Base64", "Base64URL", "Base32", "Base58", "ASCII85", "十六进制", "二进制", "URL 编码", "Unicode 转义", "HTML 实体", "Quoted-Printable", "Punycode", "字符集字节", "盲文（英语一级）", "博多码 ITA2", "中文电报码", "反切码", "猪圈密码符号", "旗语", "条形码", "QR Code", "颜色编码" };
         private const string CommonChinese = "的一是不了在人有我他这中大来上个国到说们为子和你地出道也时年得就那要下以生会自着去之过家学对可她里后小么心多天而能好都然没日于起还发成事只作当想看文无开手十用主行方又如前所本见经头面公同三已老从动两长知民样现分将外但身些与高意进把法此实回二理力它应女种教工使便度明性先名情加化太战间真话利因很定表最向全相点新内数正反原比或质气第命变条结解问建月系军者立代通并提直题程展果料象员位入常总次品式活设及管特件求基资边流路级少图山统接较组计别";
 
         internal static string Crack(ToolRequest request)
@@ -99,7 +100,7 @@ namespace ClassicalCipherToolbox.Analysis
         private static bool Eligible(string name, string input)
         {
             int letters = 0, digits = 0, nonSpace = 0; HashSet<char> unique = new HashSet<char>(); foreach (char raw in input) { if (char.IsWhiteSpace(raw)) continue; nonSpace++; unique.Add(char.ToUpperInvariant(raw)); if ((raw >= 'A' && raw <= 'Z') || (raw >= 'a' && raw <= 'z')) letters++; if (char.IsDigit(raw)) digits++; } string upper = input.ToUpperInvariant();
-            if (name == "自动解码") return nonSpace >= 4; if (name == "Morse") return Only(upper, ".-/| "); if (name == "A1Z26") return digits >= 4 && letters == 0; if (name == "Tap Code") return digits >= 8 && Only(upper, "12345 ./-|\r\n\t"); if (name == "培根") return letters >= 5 && Only(upper, "AB \r\n\t"); if (name == "Morbit" || name == "Pollux" || name == "Nihilist" || name == "跨行棋盘" || name == "同音替换") return digits >= Math.Max(20, nonSpace * 2 / 3); if (name == "ADFGX") return letters >= 30 && Only(upper, "ADFGX \r\n\t"); if (name == "ADFGVX") return letters >= 30 && Only(upper, "ADFGVX \r\n\t"); if (name == "Turning Grille") return letters == 16 || letters == 36; if (name == "Hill 2×2") return letters >= 40 && letters % 2 == 0; if (name == "单表替换") return letters >= 40 || (nonSpace >= 40 && unique.Count <= 26); if (name == "ROT13" || name == "Atbash") return letters >= 8; return letters >= 24;
+            if (name == "自动解码") return nonSpace >= 4; if (name == "中文电码加密") return digits >= 8 && digits == nonSpace; if (name == "中文隐写分析") return nonSpace >= 8 && (input.IndexOf('\n') >= 0 || letters < nonSpace / 2); if (name == "Morse") return Only(upper, ".-/| "); if (name == "A1Z26") return digits >= 4 && letters == 0; if (name == "Tap Code") return digits >= 8 && Only(upper, "12345 ./-|\r\n\t"); if (name == "培根") return letters >= 5 && Only(upper, "AB \r\n\t"); if (name == "Morbit" || name == "Pollux" || name == "Nihilist" || name == "跨行棋盘" || name == "同音替换") return digits >= Math.Max(20, nonSpace * 2 / 3); if (name == "ADFGX") return letters >= 30 && Only(upper, "ADFGX \r\n\t"); if (name == "ADFGVX") return letters >= 30 && Only(upper, "ADFGVX \r\n\t"); if (name == "Turning Grille") return letters == 16 || letters == 36; if (name == "Hill 2×2") return letters >= 40 && letters % 2 == 0; if (name == "单表替换") return letters >= 40 || (nonSpace >= 40 && unique.Count <= 26); if (name == "ROT13" || name == "Atbash") return letters >= 8; return letters >= 24;
         }
 
         private static bool Only(string text, string allowed) { foreach (char c in text) if (allowed.IndexOf(c) < 0) return false; return text.Length > 0; }
@@ -118,7 +119,7 @@ namespace ClassicalCipherToolbox.Analysis
             return false;
         }
         private static bool AlgorithmHintMatches(string name, string hint) { return hint.Length > 0 && (name.IndexOf(hint, StringComparison.OrdinalIgnoreCase) >= 0 || Related(name, "类型 " + hint)); }
-        private static bool Related(string name, string line) { if (line.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0) return true; if (name == "Vigenere" && line.IndexOf("维吉尼亚", StringComparison.Ordinal) >= 0) return true; if (name == "Rail Fence" && line.IndexOf("栅栏", StringComparison.Ordinal) >= 0) return true; if (name == "单表替换" && line.IndexOf("单表", StringComparison.Ordinal) >= 0) return true; if (name == "列换位" && line.IndexOf("换位", StringComparison.Ordinal) >= 0) return true; return false; }
+        private static bool Related(string name, string line) { if (line.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0) return true; if (name == "中文电码加密" && line.IndexOf("中文电报码", StringComparison.Ordinal) >= 0) return true; if (name == "Vigenere" && line.IndexOf("维吉尼亚", StringComparison.Ordinal) >= 0) return true; if (name == "Rail Fence" && line.IndexOf("栅栏", StringComparison.Ordinal) >= 0) return true; if (name == "单表替换" && line.IndexOf("单表", StringComparison.Ordinal) >= 0) return true; if (name == "列换位" && line.IndexOf("换位", StringComparison.Ordinal) >= 0) return true; return false; }
 
         private static List<Result> Parse(Job job, string output, string input, string language, string clue, int effort, long milliseconds)
         {
@@ -136,7 +137,7 @@ namespace ClassicalCipherToolbox.Analysis
             double printableRatio = printable / (double)Math.Max(1, text.Length);
             if (chinese >= Math.Max(2, letters))
             {
-                double ratio = chinese / (double)Math.Max(1, text.Length), commonRatio = common / (double)Math.Max(1, chinese), raw = 8 + ratio * 44 + commonRatio * 28 + printableRatio * 6, cap = 62 + 34 * (1 - Math.Exp(-chinese / 90.0)); return Math.Min(98, Math.Min(raw, cap));
+                string selected; double languageScore = ChineseLanguageScoring.Score(text, "自动", out selected), ratio = chinese / (double)Math.Max(1, text.Length); return Math.Min(98, languageScore * .82 + ratio * 12 + printableRatio * 4);
             }
             if (letters < 3) return Math.Min(35, printableRatio * 25); string clean = latin.ToString(), language = requestedLanguage == "AUTO" || requestedLanguage == "ZH" ? LanguageModels.DetectLanguage(clean, "NGRAM") : LanguageModels.Normalize(requestedLanguage); double gram = language == "EN" && clean.Length >= 5 ? LanguageModels.SpacelessSubstitutionScore(clean, language) / clean.Length : LanguageModels.SubstitutionScore(clean, language) / clean.Length, cosine = LanguageModels.LanguageMatchScore(clean, language, "COSINE"), coverage = language == "EN" ? SpacelessWordSegmenter.Segment(clean).Coverage : 0, boundaries = HasWordBoundaries(text) ? 12 : 0;
             double frequencyPart = Clamp((cosine - .62) / .36 * 26), sequencePart = Clamp((gram + 9.0) / 4.5 * 28), rawScore = 7 + frequencyPart + sequencePart + coverage * 22 + boundaries + printableRatio * 4, lengthCap = 58 + 38 * (1 - Math.Exp(-clean.Length / 100.0)); return Math.Min(98, Math.Min(rawScore, lengthCap));
@@ -163,3 +164,4 @@ namespace ClassicalCipherToolbox.Analysis
         private static double Clamp(double value) { return Math.Max(0, Math.Min(100, value)); }
     }
 }
+

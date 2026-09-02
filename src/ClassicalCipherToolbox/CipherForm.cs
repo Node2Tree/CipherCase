@@ -56,7 +56,7 @@ namespace ClassicalCipherToolbox
 
         internal CipherForm()
         {
-            Text = "密码箱 1.2.2";
+            Text = "密码箱 1.2.3";
             StartPosition = FormStartPosition.CenterScreen;
             MinimumSize = new Size(800, 600);
             ClientSize = new Size(960, 700);
@@ -616,7 +616,7 @@ namespace ClassicalCipherToolbox
         {
             switch (name)
             {
-                case "通用破解": case "单表替换": case "Keyword Cipher": case "列换位": case "Hill 2×2": case "Morbit": case "Myszkowski": case "AMSCO": case "Autokey": case "Playfair": case "ADFGX": case "ADFGVX": case "Fractionated Morse": case "Nihilist": case "跨行棋盘": case "Polybius": case "Bifid": case "同音替换": case "Turning Grille": case "Two-square": case "Four-square": case "Trifid": case "双重列换位": case "Ubchi": return true;
+                case "通用破解": case "单表替换": case "Keyword Cipher": case "中文电码加密": case "列换位": case "Hill 2×2": case "Morbit": case "Myszkowski": case "AMSCO": case "Autokey": case "Playfair": case "ADFGX": case "ADFGVX": case "Fractionated Morse": case "Nihilist": case "跨行棋盘": case "Polybius": case "Bifid": case "同音替换": case "Turning Grille": case "Two-square": case "Four-square": case "Trifid": case "双重列换位": case "Ubchi": return true;
                 default: return false;
             }
         }
@@ -849,3 +849,4 @@ namespace ClassicalCipherToolbox
         }
     }
 }
+

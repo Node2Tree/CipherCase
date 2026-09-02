@@ -9,21 +9,21 @@ namespace ClassicalCipherToolbox.Core
         private static readonly string[] Order = { "常用", "可破解", "自动", "已知明文", "无密钥", "快速", "搜索型", "长搜索", "中文", "Unicode", "图形" };
         private static readonly HashSet<string> Popular = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "通用破解", "密码识别器", "分析工作台", "自动解码", "Base64", "十六进制", "URL 编码", "Morse", "中文编码工作台", "字符详情卡", "中文输入法码",
+            "通用破解", "密码识别器", "分析工作台", "自动解码", "Base64", "十六进制", "URL 编码", "Morse", "中文编码工作台", "字符详情卡", "中文输入法码", "中文语言评分", "中文电报码",
             "凯撒", "ROT13", "Atbash", "单表替换", "维吉尼亚", "Autokey", "栅栏", "列换位", "Polybius", "Playfair"
         };
         private static readonly HashSet<string> Automatic = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "通用破解", "密码识别器", "自动解码", "分析工作台", "频率", "重合指数", "N-gram", "Kasiski"
+            "通用破解", "密码识别器", "自动解码", "分析工作台", "频率", "重合指数", "N-gram", "Kasiski", "中文隐写分析", "中文语言评分"
         };
         private static readonly HashSet<string> ShortText = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "自动解码", "Base64", "Base64URL", "Base32", "Base58", "十六进制", "二进制", "URL 编码", "Unicode 转义",
-            "HTML 实体", "Quoted-Printable", "ASCII85", "Punycode", "Morse", "A1Z26", "中文输入法码", "凯撒", "ROT13", "ROT-N", "Atbash", "仿射", "Reverse"
+            "HTML 实体", "Quoted-Printable", "ASCII85", "Punycode", "Morse", "A1Z26", "中文输入法码", "中文电报码", "反切码", "凯撒", "ROT13", "ROT-N", "Atbash", "仿射", "Reverse"
         };
         private static readonly HashSet<string> Chinese = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "通用破解", "密码识别器", "分析工作台", "频率", "N-gram", "单表替换", "Keyword Cipher", "字符集字节", "Unicode 转义", "中文电报码", "中文输入法码", "颜色编码"
+            "通用破解", "密码识别器", "分析工作台", "频率", "N-gram", "单表替换", "Keyword Cipher", "字符集字节", "Unicode 转义", "中文电报码", "中文电码加密", "中文输入法码", "中文语言评分", "中文代码本", "中文隐写分析", "反切码", "颜色编码"
         };
         private static readonly HashSet<string> Unicode = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -78,3 +78,4 @@ namespace ClassicalCipherToolbox.Core
         internal static string Display(ICryptoTool tool) { return string.Join(" · ", new List<string>(Get(tool)).ToArray()); }
     }
 }
+

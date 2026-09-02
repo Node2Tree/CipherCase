@@ -157,6 +157,8 @@ namespace ClassicalCipherToolbox.Ciphers
             Load(); if (!decode) { List<string> result = new List<string>(); foreach (string unit in UnicodeAnalysis.Units(input ?? string.Empty)) { string code; result.Add(ToCode.TryGetValue(unit, out code) ? code : unit); } return string.Join(" ", result.ToArray()); }
             StringBuilder output = new StringBuilder(); string[] parts = (input ?? string.Empty).Split(new[] { ' ', '\t', '\r', '\n', '-', ',' }, StringSplitOptions.RemoveEmptyEntries); foreach (string part in parts) { string value; output.Append(FromCode.TryGetValue(part.PadLeft(4, '0'), out value) ? value : "[" + part + "]"); } return output.ToString();
         }
+        internal static bool TryGetCode(string character, out string code) { Load(); return ToCode.TryGetValue(character ?? string.Empty, out code); }
+        internal static bool TryGetCharacter(string code, out string character) { Load(); return FromCode.TryGetValue((code ?? string.Empty).PadLeft(4, '0'), out character); }
         private static void Load()
         {
             if (loaded) return; loaded = true; Stream resource = Assembly.GetExecutingAssembly().GetManifestResourceStream("ClassicalCipherToolbox.Analysis.ChineseTelegraph"); if (resource == null) throw new CipherException("中文电报码表未嵌入"); using (resource) using (GZipStream gzip = new GZipStream(resource, CompressionMode.Decompress)) using (StreamReader reader = new StreamReader(gzip, Encoding.UTF8)) { string line; while ((line = reader.ReadLine()) != null) { int at = line.LastIndexOf('='); if (at <= 0) continue; string character = line.Substring(0, at), code = line.Substring(at + 1); ToCode[character] = code; if (!FromCode.ContainsKey(code)) FromCode[code] = character; } }
@@ -205,6 +207,11 @@ namespace ClassicalCipherToolbox.Ciphers
             if (field == "简体异体") return e.Simplified; if (field == "繁体异体") return e.Traditional; if (field == "语义异体") return e.Semantic;
             if (field == "兼容异体") return e.Compatibility; if (field == "汉语拼音位置") return e.HanyuPinyin; if (field == "频率读音") return e.HanyuPinlu;
             if (field == "粤语资料") return e.CheungBauer; if (field == "注音资料") return e.Phonetic; return string.Empty;
+        }
+
+        internal static string LookupSummary(string code, string scheme)
+        {
+            Load(); Dictionary<string, List<string>> index = ReverseIndex(scheme); List<string> values; string token = NormalizeQuery(code, scheme); if (!index.TryGetValue(token, out values) || values.Count == 0) return "未收录"; int count = Math.Min(96, values.Count); StringBuilder result = new StringBuilder(); for (int i = 0; i < count; i++) result.Append(values[i]); if (values.Count > count) result.Append(" …（共 ").Append(values.Count).Append(" 字）"); return result.ToString();
         }
 
         internal static string NormalizePinyin(string value, out int tone) { return PlainPinyin(value, out tone); }
@@ -431,3 +438,4 @@ namespace ClassicalCipherToolbox.Ciphers
         private static bool[,] ParseMatrix(string input){string source=input??string.Empty;int at=source.IndexOf("矩阵：",StringComparison.Ordinal);if(at>=0)source=source.Substring(at+3);string[]lines=source.Split(new[]{"\r\n","\n"},StringSplitOptions.RemoveEmptyEntries);List<string>rows=new List<string>();foreach(string line in lines){string s=line.Trim();if(s.Length==Size){bool valid=true;foreach(char c in s)if(c!='0'&&c!='1')valid=false;if(valid)rows.Add(s);}if(rows.Count==Size)break;}if(rows.Count!=Size)throw new CipherException("请粘贴本工具输出中的 21×21 矩阵");bool[,]m=new bool[Size,Size];for(int y=0;y<Size;y++)for(int x=0;x<Size;x++)m[y,x]=rows[y][x]=='1';return m;}
     }
 }
+
