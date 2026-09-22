@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace ClassicalCipherToolbox.Core
@@ -6,7 +6,7 @@ namespace ClassicalCipherToolbox.Core
     internal static class ToolTags
     {
         internal const string Any = "不限标签";
-        private static readonly string[] Order = { "常用", "可破解", "自动", "已知明文", "无密钥", "快速", "搜索型", "长搜索", "中文", "Unicode", "图形" };
+        private static readonly string[] Order = { "常用", "可破解", "自动", "已知明文", "无密钥", "快速", "搜索型", "长搜索", "中文", "Unicode", "图形", "换算", "生物" };
         private static readonly HashSet<string> Popular = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "通用破解", "密码识别器", "分析工作台", "自动解码", "Base64", "十六进制", "URL 编码", "Morse", "中文编码工作台", "字符详情卡", "中文输入法码", "中文语言评分", "中文电报码",
@@ -64,6 +64,8 @@ namespace ClassicalCipherToolbox.Core
             if (longSearch) result.Add("长搜索");
             if (Chinese.Contains(tool.Name) || tool.Category == ToolCategories.Chinese) result.Add("中文");
             if (Unicode.Contains(tool.Name) || tool.Category == ToolCategories.Chinese) result.Add("Unicode");
+            if (tool.Name == "进制换算" || tool.Name == "数据类型编码" || tool.Name == "格雷码") result.Add("换算");
+            if (tool.Name == "碱基转氨基酸") result.Add("生物");
             if (Visual.Contains(tool.Name)) result.Add("图形");
             return result;
         }

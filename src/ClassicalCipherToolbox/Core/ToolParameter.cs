@@ -13,6 +13,8 @@ namespace ClassicalCipherToolbox.Core
     internal sealed class ToolParameter
     {
         private readonly ToolMode[] modes;
+        private string dependencyId;
+        private string[] dependencyValues;
 
         internal ToolParameter(string id, string hint, bool required, params ToolMode[] modes)
         {
@@ -43,6 +45,19 @@ namespace ClassicalCipherToolbox.Core
         internal ToolParameterEditor Editor { get; private set; }
         internal string DefaultValue { get; private set; }
         internal string[] Choices { get; private set; }
+        internal string DependencyId { get { return dependencyId ?? string.Empty; } }
+
+        internal ToolParameter When(string parameterId, params string[] values)
+        {
+            dependencyId = parameterId;
+            dependencyValues = values ?? new string[0];
+            return this;
+        }
+
+        internal bool IsVisible(string dependencyValue)
+        {
+            return string.IsNullOrEmpty(dependencyId) || Array.IndexOf(dependencyValues, dependencyValue) >= 0;
+        }
 
         internal bool AppliesTo(ToolMode mode)
         {

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,7 +12,7 @@ using ClassicalCipherToolbox.Core;
 
 namespace ClassicalCipherToolbox.Tests
 {
-    internal static class CipherTests
+    internal static partial class CipherTests
     {
         private static int passed;
 
@@ -46,21 +46,36 @@ namespace ClassicalCipherToolbox.Tests
             ExpectCipherError("Vigenere empty key", delegate { vigenere.Encrypt("ABC", "123"); });
             ExpectCipherError("Affine non-coprime key", delegate { affine.Encrypt("ABC", "2,8"); });
 
-            CheckExtendedCiphers();
-            try { CheckNewCipherFamilies(); } catch (Exception exception) { Console.Error.WriteLine("NEW: " + exception.Message); Environment.Exit(1); }
-            try { CheckExpansionCiphers(); } catch (Exception exception) { Console.Error.WriteLine("EXPANSION: " + exception.Message); Environment.Exit(1); }
-            try { CheckLatestFeatures(); } catch (Exception exception) { Console.Error.WriteLine("LATEST: " + exception.Message); Environment.Exit(1); }
-            try { CheckEncodingAndMoreClassics(); } catch (Exception exception) { Console.Error.WriteLine("ENCODING: " + exception.Message); Environment.Exit(1); }
-            try { CheckChineseSuite(); } catch (Exception exception) { Console.Error.WriteLine("CHINESE: " + exception.Message); Environment.Exit(1); }
-            try { CheckAnalysis(); } catch (Exception exception) { Console.Error.WriteLine("ANALYSIS: " + exception.Message); Environment.Exit(1); }
-            try { CheckNewCrackers(); } catch (Exception exception) { Console.Error.WriteLine("CRACKERS: " + exception.Message); Environment.Exit(1); }
-            try { CheckExpansionCrackers(); } catch (Exception exception) { Console.Error.WriteLine("EXPANSION CRACKERS: " + exception.Message); Environment.Exit(1); }
-            try { CheckToolRegistry(); CheckDocumentation(); } catch (Exception exception) { Console.Error.WriteLine("REGISTRY: " + exception.Message); Environment.Exit(1); }
-            try { CheckLiveUi(); } catch (Exception exception) { Console.Error.WriteLine("UI: " + exception.Message); Environment.Exit(1); }
+            RunSuite("CONVERSIONS", CheckConversions);
+            RunSuite("CONVERSION UI", CheckConversionUi);
+            RunSuite("CLASSICAL", CheckExtendedCiphers);
+            RunSuite("NEW", delegate { CheckNewCipherFamilies(); });
+            RunSuite("EXPANSION", delegate { CheckExpansionCiphers(); });
+            RunSuite("LATEST", delegate { CheckLatestFeatures(); });
+            RunSuite("ENCODING", delegate { CheckEncodingAndMoreClassics(); });
+            RunSuite("CHINESE", delegate { CheckChineseSuite(); });
+            RunSuite("ANALYSIS", delegate { CheckAnalysis(); });
+            RunSuite("CRACKERS", delegate { CheckNewCrackers(); });
+            RunSuite("EXPANSION CRACKERS", delegate { CheckExpansionCrackers(); });
+            RunSuite("REGISTRY", delegate { CheckToolRegistry(); CheckDocumentation(); });
+            RunSuite("UI", delegate { CheckLiveUi(); });
 
             Console.WriteLine("PASS " + passed);
         }
 
+        private static void RunSuite(string name, Action suite)
+        {
+            Console.WriteLine("RUN " + name);
+            try
+            {
+                suite();
+            }
+            catch (Exception exception)
+            {
+                Console.Error.WriteLine(name + ": " + exception);
+                Environment.Exit(1);
+            }
+        }
         private static void Check(string name, string expected, string actual)
         {
             if (!string.Equals(expected, actual, StringComparison.Ordinal))
@@ -440,7 +455,7 @@ namespace ClassicalCipherToolbox.Tests
         private static void CheckToolRegistry()
         {
             IList<ICryptoTool> tools = ToolRegistry.CreateAll();
-            if (tools.Count != 123) throw new Exception("Tool registry: expected 123 tools but got " + tools.Count);
+            if (tools.Count != 127) throw new Exception("Tool registry: expected 127 tools but got " + tools.Count);
             bool foundCrack = false;
             bool foundAnalyze = false;
             int crackable = 0;
@@ -550,7 +565,7 @@ namespace ClassicalCipherToolbox.Tests
                 Dictionary<string, TextBox> parameters = (Dictionary<string, TextBox>)typeof(CipherForm).GetField("parameterBoxes", flags).GetValue(form);
                 ComboBox category = (ComboBox)typeof(CipherForm).GetField("categoryPicker", flags).GetValue(form);
                 ComboBox tags = (ComboBox)typeof(CipherForm).GetField("tagPicker", flags).GetValue(form);
-                if (form.Text != "密码箱 1.2.3" || category.Items.Contains("全部") || !category.Items.Contains(ToolCategories.Encoding) || !category.Items.Contains(ToolCategories.Chinese)) throw new Exception("Product version or concrete categories not applied");
+                if (form.Text != "密码箱 1.2.4" || category.Items.Contains("全部") || !category.Items.Contains(ToolCategories.Encoding) || !category.Items.Contains(ToolCategories.Chinese)) throw new Exception("Product version or concrete categories not applied");
                 if (!tags.Items.Contains("常用") || !tags.Items.Contains("可破解") || tags.Items.Contains("全部")) throw new Exception("Tag picker was not populated");
                 passed++;
                 tags.SelectedItem = "可破解"; ComboBox taggedTools = (ComboBox)typeof(CipherForm).GetField("toolPicker", flags).GetValue(form); foreach (object item in taggedTools.Items) if (!((ICryptoTool)item).Modes.Contains(ToolMode.Crack)) throw new Exception("Tag picker retained a non-crackable tool"); tags.SelectedItem = ToolTags.Any; passed++;
@@ -656,4 +671,3 @@ namespace ClassicalCipherToolbox.Tests
         }
     }
 }
-

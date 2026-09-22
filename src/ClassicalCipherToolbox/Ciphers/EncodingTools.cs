@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -383,9 +383,8 @@ namespace ClassicalCipherToolbox.Ciphers
     internal static class SymbolCodes
     {
         private const string PigpenSymbols = "⌜⌝⌞⌟┬┤┴├┼◰◳◲◱◉⊞◈△▷▽◁▲▶▼◀◆◇";
-        private static readonly string[] Semaphore = { "↓↙","↓←","↓↖","↓↑","↗↓","→↓","↘↓","↙←","↙↖","↑→","↙↑","↙↗","↙→","↙↘","←↖","←↑","←↗","←→","←↘","↖↑","↑↘","↘↗","→↖","↖↗","↖↘","↗→" };
         internal static string Pigpen(string input, bool decode) { if (!decode) { StringBuilder result = new StringBuilder(); foreach (char raw in input ?? string.Empty) { char c = char.ToUpperInvariant(raw); result.Append(c >= 'A' && c <= 'Z' ? PigpenSymbols[c - 'A'] : raw); } return result.ToString(); } StringBuilder output = new StringBuilder(); foreach (char c in input ?? string.Empty) { int p = PigpenSymbols.IndexOf(c); output.Append(p >= 0 ? (char)('A' + p) : c); } return output.ToString(); }
-        internal static string FlagSemaphore(string input, bool decode) { if (!decode) { List<string> result = new List<string>(); foreach (char raw in input ?? string.Empty) { char c = char.ToUpperInvariant(raw); result.Add(c >= 'A' && c <= 'Z' ? Semaphore[c - 'A'] : raw.ToString()); } return string.Join(" / ", result.ToArray()); } StringBuilder output = new StringBuilder(); foreach (string token in (input ?? string.Empty).Split(new[] { '/', ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)) { int p = Array.IndexOf(Semaphore, token); output.Append(p >= 0 ? (char)('A' + p) : '?'); } return output.ToString(); }
+        internal static string FlagSemaphore(string input, bool decode) { return SemaphoreCode.Transform(input, decode); }
     }
 
     internal static class ColorEncoding
